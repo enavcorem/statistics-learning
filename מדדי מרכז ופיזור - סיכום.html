@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>דף סיכום: מדדי מרכז ופיזור</title>
+    <style>
+        :root {
+            --primary: #4A90E2;       /* כחול - מרכז */
+            --secondary: #9b59b6;     /* סגול - פיזור */
+            --text: #2c3e50;
+            --border: #e0e0e0;
+            --tag-scale: #e8f5e9;     /* ירוק למשתנה כמותי */
+            --tag-ordinal: #fff3e0;   /* כתום למשתנה סדור */
+            --tag-nominal: #e3f2fd;   /* כחול למשתנה שמי */
+            --text-scale: #2e7d32;
+            --text-ordinal: #ef6c00;
+            --text-nominal: #1565c0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f6f8;
+            color: var(--text);
+            margin: 0;
+            padding: 40px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #34495e;
+            margin-bottom: 30px;
+            font-size: 2.2rem;
+            border-bottom: 4px solid #ddd;
+            padding-bottom: 15px;
+            display: inline-block;
+            width: 100%;
+        }
+
+        /* עיצוב כותרות הסקשנים (הבאנרים) */
+        .section-header {
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-top: 40px;
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .header-center { background: linear-gradient(135deg, #4A90E2 0%, #2980b9 100%); }
+        .header-dispersion { background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%); }
+
+        /* אזהרת משתנה כמותי */
+        .quantitative-alert {
+            background-color: #fff3e0;
+            border: 1px solid #ffe0b2;
+            color: #e65100;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-weight: bold;
+            display: inline-block;
+            width: 100%;
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        /* עיצוב הטבלאות */
+        .summary-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            margin-bottom: 30px;
+            table-layout: fixed; /* קובע רוחב עמודות יציב */
+        }
+
+        .summary-table th, .summary-table td {
+            padding: 15px;
+            text-align: right;
+            border-bottom: 1px solid var(--border);
+            vertical-align: top;
+        }
+
+        .summary-table th {
+            color: white;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .summary-table tr:last-child td { border-bottom: none; }
+        .summary-table tr:hover { background-color: #f9f9f9; }
+
+        .th-center { background-color: var(--primary); }
+        .th-dispersion { background-color: var(--secondary); }
+
+        /* תגיות */
+        .var-tag {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-bottom: 4px;
+            white-space: nowrap;
+        }
+        .tag-scale { background-color: var(--tag-scale); color: var(--text-scale); }
+        .tag-ordinal { background-color: var(--tag-ordinal); color: var(--text-ordinal); }
+        .tag-nominal { background-color: var(--tag-nominal); color: var(--text-nominal); }
+
+        /* קופסאות טיפים */
+        .notes-box {
+            background-color: #fff;
+            border-right: 5px solid;
+            padding: 20px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .icon { font-size: 1.8rem; margin-left: 15px; }
+        .highlight-text { color: #d35400; font-weight: bold; }
+
+        @media print {
+            body { background-color: white; padding: 0; }
+            .container { max-width: 100%; }
+            .summary-table { box-shadow: none; border: 1px solid #ccc; }
+            .section-header { -webkit-print-color-adjust: exact; color: white !important; }
+            .th-center, .th-dispersion { -webkit-print-color-adjust: exact; color: white !important; }
+        }
+    </style>
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-config.js"></script>
+<script src="js/progress.js"></script>
+
+<div class="container">
+    <h1>דף סיכום: מדדי מרכז ופיזור 📊</h1>
+
+    <div class="section-header header-center">
+        <span class="icon">🎯</span> מדדי מיקום מרכזי (איפה האמצע?)
+    </div>
+
+    <table class="summary-table">
+        <thead>
+            <tr>
+                <th class="th-center" style="width:15%">שם המדד</th>
+                <th class="th-center" style="width:30%">הסבר פשוט</th>
+                <th class="th-center" style="width:25%">איך מחשבים?</th>
+                <th class="th-center" style="width:30%">לאיזה משתנה מתאים?</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>ממוצע</strong></td>
+                <td>מרכז הכובד. אם נחלק את כל ה"עוגה" שווה בשווה לכולם.<br>
+                <span style="font-size:0.9rem; color:#c0392b;">⚠️ רגיש מאוד לקיצון!</span></td>
+                <td>סכום הכל חלקי הכמות.</td>
+                <td>
+                    <span class="var-tag tag-scale">כמותי (רווח/מנה)</span>
+                </td>
+            </tr>
+            <tr>
+                <td><strong>חציון</strong></td>
+                <td>מי עומד בדיוק באמצע הטור (כשמסדרים מהקטן לגדול).<br>
+                <span style="font-size:0.9rem; color:#27ae60;">🛡️ חסין לקיצון.</span></td>
+                <td>מסדרים ומוצאים אמצע.<br>(בזוגי: ממוצע של ה-2 באמצע).</td>
+                <td>
+                    <span class="var-tag tag-scale">כמותי</span><br>
+                    <span class="var-tag tag-ordinal">איכותי סדור</span>
+                </td>
+            </tr>
+            <tr>
+                <td><strong>שכיח</strong></td>
+                <td>הכי פופולרי. הערך שמופיע הכי הרבה פעמים.</td>
+                <td>ספירה.</td>
+                <td>
+                    <span class="var-tag tag-scale">כמותי</span><br>
+                    <span class="var-tag tag-ordinal">איכותי סדור</span><br>
+                    <span class="var-tag tag-nominal">איכותי שמי</span>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="notes-box" style="border-color: var(--primary);">
+        <strong>💡 איך שינוי נתונים משפיע על המרכז?</strong>
+        <ul>
+            <li><strong>הוספת ערך גבוה:</strong> הממוצע יעלה. החציון כנראה לא יזוז.</li>
+            <li><strong>הוספת ערך נמוך:</strong> הממוצע ירד. החציון כנראה לא יזוז.</li>
+            <li><strong>הוספת קבוע לכולם (למשל בונוס 5 נק'):</strong> הממוצע והחציון יגדלו ב-5 בדיוק.</li>
+        </ul>
+    </div>
+
+    <div class="section-header header-dispersion">
+        <span class="icon">🌊</span> מדדי פיזור (כמה הנתונים "משוגעים"?)
+    </div>
+
+    <div class="quantitative-alert">
+        ⚠️ שימי לב: כל מדדי הפיזור מתאימים למשתנים כמותיים בלבד!
+    </div>
+
+    <table class="summary-table">
+        <thead>
+            <tr>
+                <th class="th-dispersion" style="width:15%">שם המדד</th>
+                <th class="th-dispersion" style="width:45%">הסבר ומשמעות</th>
+                <th class="th-dispersion" style="width:20%">איך מחשבים?</th>
+                <th class="th-dispersion" style="width:20%">תכונות</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>טווח</strong></td>
+                <td>המרחק הכולל מקצה לקצה.<br>ההפרש בין ההצלחה הכי גדולה לכישלון הכי גדול.</td>
+                <td>מקסימום פחות מינימום.</td>
+                <td>מושפע רק מהקיצון.</td>
+            </tr>
+            <tr>
+                <td><strong>טווח בין-רבעוני (IQR)</strong></td>
+                <td>המרחק של ה"לב" של הכיתה (ה-50% האמצעיים).<br>מתעלם מהקיצוניים ביותר.</td>
+                <td>Q3 (רבעון עליון) פחות Q1 (רבעון תחתון).</td>
+                <td>מדד יציב שלא מושפע מקיצון.</td>
+            </tr>
+            <tr>
+                <td><strong>שונות</strong></td>
+                <td>החישוב המתמטי ("המנוע") של הפיזור. בודקת מרחקים בריבוע כדי לא לקבל אפס.<br>פחות שימושית להסבר מילולי.</td>
+                <td>ממוצע של (המרחקים מהממוצע בריבוע).</td>
+                <td>מתקבלת בערכים ריבועיים.</td>
+            </tr>
+            <tr>
+                <td><strong>סטיית תקן</strong></td>
+                <td><span class="highlight-text">המדד הכי חשוב! מדד היציבות.</span><br>
+                בודקת: <strong>כמה אנחנו רחוקים בממוצע מהממוצע?</strong><br>
+                סטייה קטנה = כולם קרובים (יציבות).<br>
+                סטייה גדולה = יש פערים גדולים (פיזור).</td>
+                <td>שורש של השונות.</td>
+                <td>מושפעת מערכים קיצוניים (כי הם רחוקים מהממוצע).</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="notes-box" style="border-color: var(--secondary);">
+        <strong>💡 איך שינוי נתונים משפיע על הפיזור?</strong>
+        <ul>
+            <li><strong>הוספת קבוע לכולם (למשל בונוס 5 נק'):</strong> הפיזור <span style="text-decoration: underline;">לא משתנה</span>! (המרחקים בין הילדים נשארו אותו דבר).</li>
+            <li><strong>הכפלת כל הנתונים (פי 2):</strong> הפיזור (סטיית התקן) יוכפל גם הוא פי 2.</li>
+            <li><strong>הוספת תלמיד עם ציון ממוצע:</strong> הפיזור יקטן (הוספנו "שקט").</li>
+        </ul>
+    </div>
+
+</div>
+
+<script>
+// ===== שילוב פלטפורמת למידה – מודול 5 =====
+const _MOD_INDEX = 5;
+const _MOD_NAME = 'סיכום: מדדי מרכז ופיזור';
+
+document.addEventListener('DOMContentLoaded', function() {
+  initModule(_MOD_INDEX, _MOD_NAME, function(progress) {
+    // דף סיכום סטטי – קריאתו מהווה השלמה
+    markComplete(_MOD_INDEX);
+  });
+});
+</script>
+
+</body>
+</html>

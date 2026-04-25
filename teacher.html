@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>לוח מורה – סטטיסטיקה</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase-config.js"></script>
+  <script src="js/progress.js"></script>
+  <style>
+    :root {
+      --primary: #6C63FF;
+      --success: #28a745;
+      --warning: #FF9F1C;
+      --bg: #F3F4F6;
+      --card: #fff;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: var(--bg);
+      color: #333;
+      min-height: 100vh;
+      direction: rtl;
+    }
+
+    /* ===== מסך כניסה ===== */
+    #login-screen {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .login-box {
+      background: var(--card);
+      border-radius: 20px;
+      padding: 40px;
+      width: 100%;
+      max-width: 380px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+
+    .login-box .icon { font-size: 3rem; margin-bottom: 14px; }
+    .login-box h2 { color: var(--primary); margin-bottom: 6px; }
+    .login-box p { color: #999; font-size: 0.9rem; margin-bottom: 24px; }
+
+    .login-box input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 1rem;
+      text-align: center;
+      letter-spacing: 3px;
+      margin-bottom: 14px;
+      font-family: inherit;
+    }
+
+    .login-box input:focus { outline: none; border-color: var(--primary); }
+    .login-box .err { color: #e74c3c; font-size: 0.85rem; margin-bottom: 10px; min-height: 18px; }
+
+    .btn-enter {
+      width: 100%;
+      padding: 12px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .btn-enter:hover { background: #5a52d5; }
+
+    /* ===== לוח המורה ===== */
+    #dashboard { display: none; }
+
+    .top-bar {
+      background: var(--card);
+      padding: 16px 30px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 2px solid #eee;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+
+    .top-bar h1 { font-size: 1.3rem; color: var(--primary); }
+    .top-bar span { font-size: 0.9rem; color: #888; }
+
+    .content { padding: 24px 30px; }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+
+    .stat-card .num { font-size: 2rem; font-weight: bold; color: var(--primary); }
+    .stat-card .label { font-size: 0.82rem; color: #aaa; margin-top: 4px; }
+
+    /* ===== פילטרים ===== */
+    .filters {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .filters select, .filters input {
+      padding: 8px 12px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-family: inherit;
+      direction: rtl;
+    }
+
+    .filters select:focus, .filters input:focus { outline: none; border-color: var(--primary); }
+
+    .btn-refresh {
+      padding: 8px 16px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    /* ===== טבלת תלמידות ===== */
+    .table-wrap {
+      background: var(--card);
+      border-radius: 16px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    thead th {
+      background: #f8f8ff;
+      padding: 14px 12px;
+      text-align: right;
+      font-weight: 600;
+      color: #666;
+      border-bottom: 2px solid #eee;
+      white-space: nowrap;
+    }
+
+    tbody tr { border-bottom: 1px solid #f0f0f0; transition: background 0.15s; }
+    tbody tr:hover { background: #fafaf8; }
+    tbody tr:last-child { border-bottom: none; }
+
+    td { padding: 12px; vertical-align: middle; }
+
+    .td-name { font-weight: 600; }
+    .td-class { color: #888; font-size: 0.85rem; }
+    .td-seen { color: #aaa; font-size: 0.82rem; }
+
+    /* סטטוס לומדה */
+    .dot-wrap { display: flex; gap: 4px; flex-wrap: nowrap; }
+
+    .dot {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: bold;
+      cursor: default;
+      title: '';
+    }
+
+    .dot-done { background: #d4f5e5; color: var(--success); }
+    .dot-progress { background: #fff3cd; color: var(--warning); }
+    .dot-locked { background: #f0f0f0; color: #ccc; }
+
+    /* כפתורי פעולה */
+    .btn-unlock {
+      padding: 6px 12px;
+      background: #fff;
+      border: 2px solid var(--primary);
+      border-radius: 8px;
+      font-size: 0.82rem;
+      cursor: pointer;
+      color: var(--primary);
+      font-family: inherit;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .btn-unlock:hover { background: var(--primary); color: #fff; }
+    .btn-unlock:disabled { border-color: #ddd; color: #ccc; cursor: default; background: #f8f8f8; }
+
+    #loading-msg { text-align: center; padding: 40px; color: #aaa; }
+    #no-students { text-align: center; padding: 30px; color: #aaa; }
+
+    /* Legend */
+    .legend {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 12px;
+      font-size: 0.82rem;
+      color: #888;
+      flex-wrap: wrap;
+    }
+    .legend span { display: flex; align-items: center; gap: 5px; }
+  </style>
+</head>
+<body>
+
+<!-- מסך כניסת מורה -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="icon">👩‍🏫</div>
+    <h2>לוח מורה</h2>
+    <p>הכניסי את סיסמת המורה להיכנס</p>
+    <input type="password" id="teacher-pass" placeholder="סיסמה" onkeydown="if(event.key==='Enter')checkPass()">
+    <div class="err" id="pass-err"></div>
+    <button class="btn-enter" onclick="checkPass()">כניסה</button>
+  </div>
+</div>
+
+<!-- לוח המורה -->
+<div id="dashboard">
+  <div class="top-bar">
+    <h1>📊 לוח מורה – סטטיסטיקה</h1>
+    <span id="last-refresh"></span>
+  </div>
+
+  <div class="content">
+    <div class="stats-row" id="stats-row"></div>
+
+    <div class="filters">
+      <select id="filter-class" onchange="renderTable()">
+        <option value="">כל הכיתות</option>
+      </select>
+      <input type="text" id="filter-name" placeholder="חיפוש לפי שם..." oninput="renderTable()">
+      <button class="btn-refresh" onclick="loadData()">🔄 רענן</button>
+    </div>
+
+    <div class="legend">
+      <span><span class="dot dot-done">✓</span> הושלם</span>
+      <span><span class="dot dot-progress">▶</span> בתהליך</span>
+      <span><span class="dot dot-locked">—</span> נעול / לא התחיל</span>
+    </div>
+
+    <div class="table-wrap">
+      <div id="loading-msg">טוען נתונים... ⏳</div>
+      <div id="no-students" style="display:none;">אין תלמידות רשומות עדיין</div>
+      <table id="students-table" style="display:none;">
+        <thead>
+          <tr>
+            <th>שם</th>
+            <th>כיתה</th>
+            <th>התקדמות</th>
+            <th id="modules-header-cells"></th>
+            <th>נראתה לאחרונה</th>
+            <th>פתיחת לומדה</th>
+          </tr>
+        </thead>
+        <tbody id="students-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  // שנני את הסיסמה כאן:
+  const TEACHER_PASSWORD = 'ענב2025';
+
+  let allStudents = [];
+  let progressData = {};
+
+  function checkPass() {
+    const pass = document.getElementById('teacher-pass').value;
+    if (pass === TEACHER_PASSWORD) {
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('dashboard').style.display = 'block';
+      loadData();
+    } else {
+      document.getElementById('pass-err').textContent = 'סיסמה שגויה';
+    }
+  }
+
+  async function loadData() {
+    document.getElementById('loading-msg').style.display = 'block';
+    document.getElementById('students-table').style.display = 'none';
+    document.getElementById('no-students').style.display = 'none';
+
+    // Load all students
+    const { data: students } = await supabaseClient
+      .from('students')
+      .select('*')
+      .order('class_name')
+      .order('name');
+
+    // Load all progress rows
+    const { data: progRows } = await supabaseClient
+      .from('module_progress')
+      .select('student_id, module_index, status, last_slide');
+
+    // Build progress map: student_id -> { module_index -> {status, last_slide} }
+    progressData = {};
+    (progRows || []).forEach(r => {
+      if (!progressData[r.student_id]) progressData[r.student_id] = {};
+      progressData[r.student_id][r.module_index] = r;
+    });
+
+    allStudents = students || [];
+
+    // Populate class filter
+    const classes = [...new Set(allStudents.map(s => s.class_name))].sort();
+    const filterEl = document.getElementById('filter-class');
+    filterEl.innerHTML = '<option value="">כל הכיתות</option>';
+    classes.forEach(c => {
+      const o = document.createElement('option');
+      o.value = c; o.textContent = c;
+      filterEl.appendChild(o);
+    });
+
+    // Update stats
+    updateStats();
+
+    // Build column headers for modules
+    const headerRow = document.getElementById('modules-header-cells');
+    headerRow.colSpan = MODULE_CONFIG.length - 1;
+    // Rebuild header row properly
+    const thead = document.querySelector('#students-table thead tr');
+    thead.innerHTML = `
+      <th>שם</th><th>כיתה</th>
+      ${MODULE_CONFIG.map(m => `<th title="${m.title}" style="min-width:36px;text-align:center;">${m.index}</th>`).join('')}
+      <th>נראתה לאחרונה</th><th>פתיחת לומדה</th>
+    `;
+
+    document.getElementById('last-refresh').textContent = 'עודכן: ' + new Date().toLocaleTimeString('he-IL');
+    renderTable();
+  }
+
+  function updateStats() {
+    const total = allStudents.length;
+    let activeToday = 0;
+    let completedAll = 0;
+    const today = new Date().toDateString();
+
+    allStudents.forEach(s => {
+      if (s.last_seen && new Date(s.last_seen).toDateString() === today) activeToday++;
+      const prog = progressData[s.id] || {};
+      const doneCount = Object.values(prog).filter(p => p.status === 'completed').length;
+      if (doneCount === MODULE_CONFIG.length) completedAll++;
+    });
+
+    document.getElementById('stats-row').innerHTML = `
+      <div class="stat-card"><div class="num">${total}</div><div class="label">תלמידות רשומות</div></div>
+      <div class="stat-card"><div class="num">${activeToday}</div><div class="label">פעילות היום</div></div>
+      <div class="stat-card"><div class="num">${completedAll}</div><div class="label">השלימו הכל</div></div>
+      <div class="stat-card"><div class="num">${MODULE_CONFIG.length}</div><div class="label">לומדות בסה"כ</div></div>
+    `;
+  }
+
+  function renderTable() {
+    const filterClass = document.getElementById('filter-class').value;
+    const filterName = document.getElementById('filter-name').value.toLowerCase();
+
+    let rows = allStudents.filter(s => {
+      if (filterClass && s.class_name !== filterClass) return false;
+      if (filterName && !s.name.toLowerCase().includes(filterName)) return false;
+      return true;
+    });
+
+    const tbody = document.getElementById('students-tbody');
+
+    if (allStudents.length === 0) {
+      document.getElementById('loading-msg').style.display = 'none';
+      document.getElementById('no-students').style.display = 'block';
+      return;
+    }
+
+    tbody.innerHTML = '';
+    rows.forEach(s => {
+      const prog = progressData[s.id] || {};
+      const unlockedUpTo = s.unlocked_up_to || 1;
+
+      const dotCells = MODULE_CONFIG.map(m => {
+        const p = prog[m.index];
+        const isCompleted = p && p.status === 'completed';
+        const isStarted = p && p.status === 'started';
+        const isLocked = m.index > unlockedUpTo && !p;
+
+        let cls = 'dot-locked', symbol = '—', tip = 'לא התחיל';
+        if (isCompleted) { cls = 'dot-done'; symbol = '✓'; tip = 'הושלם'; }
+        else if (isStarted) { cls = 'dot-progress'; symbol = '▶'; tip = 'בתהליך'; }
+        else if (!isLocked) { tip = 'לא התחיל (פתוח)'; }
+
+        return `<td style="text-align:center;"><div class="dot ${cls}" title="${tip}">${symbol}</div></td>`;
+      }).join('');
+
+      const lastSeen = s.last_seen
+        ? new Date(s.last_seen).toLocaleDateString('he-IL', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })
+        : '—';
+
+      const canUnlock = unlockedUpTo < MODULE_CONFIG.length;
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="td-name">${s.name}</td>
+        <td class="td-class">${s.class_name}</td>
+        ${dotCells}
+        <td class="td-seen">${lastSeen}</td>
+        <td>
+          <button class="btn-unlock" ${!canUnlock ? 'disabled' : ''}
+            onclick="unlockNext('${s.id}', ${unlockedUpTo})">
+            ${canUnlock ? '🔓 פתחי לומדה ' + (unlockedUpTo + 1) : '✅ הכל פתוח'}
+          </button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    document.getElementById('loading-msg').style.display = 'none';
+    document.getElementById('students-table').style.display = 'table';
+  }
+
+  async function unlockNext(studentId, currentUnlocked) {
+    const newVal = Math.min(currentUnlocked + 1, MODULE_CONFIG.length);
+    await supabaseClient
+      .from('students')
+      .update({ unlocked_up_to: newVal })
+      .eq('id', studentId);
+
+    // Update local cache
+    const s = allStudents.find(x => x.id === studentId);
+    if (s) s.unlocked_up_to = newVal;
+    renderTable();
+    updateStats();
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מבחן חשיבה סטטיסטית (ידידותי)</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #e67e22;  /* כתום לאתגר */
+            --bg: #ecf0f1;
+            --card-bg: #ffffff;
+            --text: #2c3e50;
+            --success: #27ae60;
+            --error: #c0392b;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            direction: rtl;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: var(--card-bg);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            padding: 40px;
+            border-top: 5px solid var(--accent);
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 20px;
+        }
+
+        h1 { color: var(--primary); margin: 0; font-size: 2.2rem; }
+        .subtitle { color: #7f8c8d; margin-top: 10px; font-size: 1.1rem; }
+
+        .question-card {
+            background: #fff;
+            margin-bottom: 25px;
+            padding: 25px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        .question-card:hover {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            border-color: var(--accent);
+        }
+
+        .question-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .question-text {
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+
+        .options label {
+            display: block;
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            background-color: #fafafa;
+            border: 2px solid #eee;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .options label:hover {
+            background-color: #fff8e1;
+            border-color: var(--accent);
+        }
+
+        .options input { margin-left: 10px; }
+
+        .options label.selected {
+            background-color: #fdf2e9;
+            border-color: var(--accent);
+            font-weight: bold;
+        }
+
+        .btn-submit {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 15px 50px;
+            font-size: 1.3rem;
+            border-radius: 50px;
+            cursor: pointer;
+            display: block;
+            margin: 40px auto 0;
+            box-shadow: 0 5px 15px rgba(44, 62, 80, 0.3);
+            transition: transform 0.2s;
+        }
+
+        .btn-submit:hover { transform: translateY(-3px); }
+
+        /* Results Area */
+        #results-area { display: none; text-align: center; animation: fadeIn 0.8s; }
+        
+        .score-circle {
+            width: 120px; height: 120px;
+            background: var(--primary); color: white;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 3rem; font-weight: bold;
+            margin: 0 auto 20px;
+        }
+
+        .feedback-list {
+            text-align: right;
+            margin-top: 30px;
+        }
+
+        .mistake-card {
+            background: #fff;
+            border-right: 4px solid var(--error);
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .explanation {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed #ddd;
+            font-size: 0.95rem;
+            color: #555;
+        }
+
+        .copy-btn {
+            background-color: #25D366; color: white; border: none;
+            padding: 12px 30px; border-radius: 30px; font-size: 1.1rem;
+            cursor: pointer; margin-top: 20px; display: inline-flex; align-items: center; gap: 10px;
+        }
+
+        #error-msg { color: var(--error); display: none; text-align: center; margin-top: 15px; font-weight: bold; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    </style>
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-config.js"></script>
+<script src="js/progress.js"></script>
+
+<div class="container">
+    <header>
+        <h1>מבחן חשיבה סטטיסטית 🧠</h1>
+        <div class="subtitle">שאלות הבנה (בלי חישובים מסובכים!)</div>
+    </header>
+
+    <form id="quiz-form">
+        <div id="questions-container"></div>
+        <div id="error-msg">יש לענות על כל השאלות לפני ההגשה</div>
+        <button type="button" class="btn-submit" onclick="submitQuiz()">הגש מבחן 🏁</button>
+    </form>
+
+    <div id="results-area">
+        <div class="score-circle" id="final-score"></div>
+        <h2 id="score-title"></h2>
+        <p id="score-text"></p>
+        
+        <button class="copy-btn" onclick="copyResults()">
+            📋 העתק דוח למורה
+        </button>
+
+        <div class="feedback-list" id="feedback-details"></div>
+    </div>
+</div>
+
+<script>
+    const questions = [
+        // שאלה 1: הזזה (קליל ואינטואיטיבי)
+        {
+            topic: "הזזה (בונוס כיתתי)",
+            q: "המורה החליטה לתת בונוס של 5 נקודות לכל התלמידות.<br>האם הפערים (המרחקים) בין התלמידות השתנו?",
+            opts: [
+                "כן, הפערים גדלו ב-5",
+                "לא, הפערים נשארו בדיוק אותו דבר",
+                "כן, אבל רק למצטיינות",
+                "אי אפשר לדעת"
+            ],
+            a: 1,
+            expl: "כשאנחנו מוסיפים קבוע לכולם, כל הכיתה 'זזה' ימינה על הציר, אבל המרחק בין תלמידה לחברתה נשאר זהה. לכן מדדי הפיזור (סטיית תקן/טווח) לא משתנים."
+        },
+        // שאלה 2: חציון וקיצון
+        {
+            topic: "חסינות החציון",
+            q: "נתונה סדרת ציונים. הציון הגבוה ביותר בכיתה היה 95, אך התברר שהייתה טעות והוא בעצם 100.<br>כיצד ישתנו הממוצע והחציון?",
+            opts: [
+                "הממוצע והחציון יגדלו",
+                "הממוצע יגדל, החציון לא ישתנה",
+                "שניהם לא ישתנו",
+                "הממוצע לא ישתנה, החציון יגדל"
+            ],
+            a: 1,
+            expl: "הממוצע תלוי בערך המדויק (סכום) ולכן יגדל. החציון תלוי רק ב<b>מיקום</b> (סדר). הציון הכי גבוה נשאר הכי גבוה, הסדר לא השתנה, ולכן החציון לא זז."
+        },
+        // שאלה 3: כפל (בלי שונות)
+        {
+            topic: "מתיחה (כפל)",
+            q: "הכפלנו את כל הציונים פי 2 (למשל: המרנו מ-50 נקודות ל-100).<br>מה קרה לממוצע ולסטיית התקן?",
+            opts: [
+                "רק הממוצע גדל פי 2, סטיית התקן נשארה",
+                "הממוצע גדל ב-2 נקודות",
+                "שניהם (הממוצע וסטיית התקן) גדלו פי 2",
+                "סטיית התקן גדלה פי 4"
+            ],
+            a: 2,
+            expl: "בכפל, הכל 'נמתח'. גם המספרים עצמם גדלים (ממוצע), וגם הפערים ביניהם גדלים באותו יחס (סטיית תקן)."
+        },
+        // שאלה 4: איחוד קבוצות (ממוצע משוקלל)
+        {
+            topic: "איחוד קבוצות",
+            q: "בכיתה י'1 הממוצע הוא 80. בכיתה י'2 הממוצע הוא 90.<br>אם נחבר את שתי הכיתות, האם הממוצע הכללי יהיה 85?",
+            opts: [
+                "כן, תמיד",
+                "לא, הוא יהיה גבוה מ-85",
+                "רק אם מספר התלמידים בשתי הכיתות זהה",
+                "אי אפשר לדעת כלום"
+            ],
+            a: 2,
+            expl: "ממוצע של ממוצעים עובד רק אם הקבוצות באותו גודל. אם י'2 ענקית וי'1 קטנה, הממוצע הכללי יימשך לכיוון ה-90."
+        },
+        // שאלה 5: הוספת נתון והשפעתו על הפיזור
+        {
+            topic: "הוספת נתון מרכזי",
+            q: "הממוצע בכיתה הוא 75. הצטרף תלמיד שקיבל ציון 75 בדיוק.<br>מה יקרה לסטיית התקן (לפיזור)?",
+            opts: [
+                "תגדל (כי יש יותר תלמידים)",
+                "תקטן",
+                "תישאר בדיוק אותו דבר",
+                "תתאפס"
+            ],
+            a: 1,
+            expl: "הוספנו מישהו שנמצא בול במרכז. הוא לא מוסיף 'רעש' או מרחק, אלא מחזק את המרכז, ולכן הפיזור הממוצע <b>יורד</b>."
+        },
+        // שאלה 6: כפל במינוס (הבנה עמוקה)
+        {
+            topic: "כפל במספר שלילי",
+            q: "כפלנו את כל המספרים במינוס 1 (-1).<br>מה יקרה לסטיית התקן?",
+            opts: [
+                "תהפוך לשלילית",
+                "תישאר חיובית וזהה בערכה",
+                "תשתנה ל-0",
+                "אי אפשר לחשב"
+            ],
+            a: 1,
+            expl: "סטיית תקן מודדת <b>מרחק</b>, ומרחק הוא תמיד חיובי. אם הפכנו את הנתונים (כמו מראה), המרווחים ביניהם נשארו אותו דבר בדיוק."
+        },
+        // שאלה 7: מדד לנתונים איכותיים
+        {
+            topic: "סוגי משתנים",
+            q: "אספנו נתונים על 'צבע העיניים' של התלמידים. איזה מדד מרכז ניתן לחשב?",
+            opts: [
+                "ממוצע",
+                "חציון",
+                "שכיח",
+                "טווח"
+            ],
+            a: 2,
+            expl: "למשתנה שמי (כמו צבע) אין סדר ואין ערך מספרי. אי אפשר לחשב ממוצע או לסדר לחציון. אפשר רק לבדוק מה הכי נפוץ (שכיח)."
+        },
+        // שאלה 8: שינוי ערך ופיזור
+        {
+            topic: "שינוי ערך",
+            q: "הממוצע הוא 80. תיקנו ציון של תלמיד מ-90 ל-85.<br>מה קרה לסטיית התקן?",
+            opts: [
+                "גדלה",
+                "קטנה",
+                "לא השתנתה",
+                "לא ניתן לדעת"
+            ],
+            a: 1,
+            expl: "התלמיד היה במרחק 10 מהממוצע (90), ועכשיו הוא במרחק 5 (85). הוא <b>התקרב</b> למרכז, ולכן הפיזור קטן."
+        },
+        // שאלה 9: סכום הסטיות
+        {
+            topic: "תכונת הממוצע",
+            q: "אם נחשב לכל תלמיד את המרחק מהממוצע (פלוס או מינוס) ונסכום את כל המרחקים, מה תמיד נקבל?",
+            opts: [
+                "את סטיית התקן",
+                "מספר חיובי גדול",
+                "תמיד אפס",
+                "את הממוצע"
+            ],
+            a: 2,
+            expl: "זוהי התכונה הקלאסית של הממוצע: הוא מרכז הכובד, ולכן הסטייה כלפי מעלה והסטייה כלפי מטה תמיד מתאזנות לאפס."
+        },
+        // שאלה 10: זיהוי שונות 0
+        {
+            topic: "שונות אפס",
+            q: "בחישוב סטטיסטי יצא שסטיית התקן היא 0. מה זה אומר על הכיתה?",
+            opts: [
+                "שאף אחד לא הגיע למבחן",
+                "שהממוצע הוא 0",
+                "שכל התלמידים קיבלו בדיוק אותו ציון",
+                "שיש טעות בחישוב, זה לא ייתכן"
+            ],
+            a: 2,
+            expl: "סטיית תקן 0 אומרת שאין שום 'מרחק' בין הציונים לממוצע. כולם עומדים בדיוק באותה נקודה."
+        }
+    ];
+
+    function renderQuiz() {
+        const container = document.getElementById('questions-container');
+        questions.forEach((item, index) => {
+            const card = document.createElement('div');
+            card.className = 'question-card';
+            
+            card.innerHTML = `
+                <div class="question-header">שאלה ${index + 1} // ${item.topic}</div>
+                <div class="question-text">${item.q}</div>
+                <div class="options">
+                    ${item.opts.map((opt, i) => `
+                        <label onclick="selectOption(this)">
+                            <input type="radio" name="q${index}" value="${i}">
+                            ${opt}
+                        </label>
+                    `).join('')}
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    function selectOption(label) {
+        const parent = label.parentElement;
+        const labels = parent.querySelectorAll('label');
+        labels.forEach(l => l.classList.remove('selected'));
+        label.classList.add('selected');
+    }
+
+    function submitQuiz() {
+        let score = 0;
+        let mistakes = [];
+        let unanswered = false;
+
+        questions.forEach((item, index) => {
+            const selected = document.querySelector(`input[name="q${index}"]:checked`);
+            if (!selected) {
+                unanswered = true;
+            } else {
+                const val = parseInt(selected.value);
+                if (val === item.a) {
+                    score += 10; 
+                } else {
+                    mistakes.push({
+                        q: item.q,
+                        correct: item.opts[item.a],
+                        wrong: item.opts[val],
+                        expl: item.expl
+                    });
+                }
+            }
+        });
+
+        if (unanswered) {
+            document.getElementById('error-msg').style.display = 'block';
+            return;
+        }
+
+        // Show Results
+        document.getElementById('quiz-form').style.display = 'none';
+        document.getElementById('results-area').style.display = 'block';
+        document.getElementById('final-score').innerText = score;
+        
+        // Custom messages based on score
+        const title = document.getElementById('score-title');
+        const text = document.getElementById('score-text');
+        
+        if (score === 100) {
+            title.innerText = "מושלם! 🏆";
+            text.innerText = "הבנה סטטיסטית עמוקה ומדויקת. כל הכבוד!";
+            document.getElementById('final-score').style.background = "#27ae60";
+        } else if (score >= 80) {
+            title.innerText = "עבודה מצוינת! 👍";
+            text.innerText = "יש לך הבנה טובה מאוד של העקרונות.";
+        } else {
+            title.innerText = "יש מקום לשיפור 💪";
+            text.innerText = "השאלות היו מאתגרות. כדאי לעבור על ההסברים למטה.";
+            document.getElementById('final-score').style.background = "#e67e22";
+        }
+
+        // Generate Report Text
+        window.reportText = `היי ענב, סיימתי את מבחן האתגר בסטטיסטיקה!\nהציון שלי: ${score}\n`;
+
+        // Show Feedback
+        if (mistakes.length > 0) {
+            window.reportText += `טעיתי ב-${mistakes.length} שאלות.`;
+            const list = document.getElementById('feedback-details');
+            
+            mistakes.forEach(m => {
+                list.innerHTML += `
+                    <div class="mistake-card">
+                        <div style="font-weight:bold; margin-bottom:5px;">${m.q}</div>
+                        <div style="color:#c0392b">סימנת: ${m.wrong}</div>
+                        <div style="color:#27ae60">הנכון: ${m.correct}</div>
+                        <div class="explanation">💡 <strong>הסבר:</strong> ${m.expl}</div>
+                    </div>
+                `;
+            });
+        } else {
+            window.reportText += `עניתי על הכל נכון! פיצחתי את הסטטיסטיקה! 😎`;
+        }
+        
+        window.scrollTo(0,0);
+    }
+
+    function copyResults() {
+        navigator.clipboard.writeText(window.reportText).then(() => {
+            alert("התוצאות הועתקו! עכשיו אפשר להדביק בוואטסאפ/מייל.");
+        });
+    }
+
+    renderQuiz();
+
+// ===== שילוב פלטפורמת למידה – מודול 7 =====
+const _MOD_INDEX = 7;
+const _MOD_NAME = 'מבחן: שינוי בנתונים';
+
+document.addEventListener('DOMContentLoaded', function() {
+  initModule(_MOD_INDEX, _MOD_NAME, function(progress) {
+    saveProgress(_MOD_INDEX, 1);
+  });
+});
+
+(function() {
+  var _orig = submitQuiz;
+  submitQuiz = function() {
+    _orig();
+    markComplete(_MOD_INDEX);
+  };
+})();
+
+</script>
+
+</body>
+</html>

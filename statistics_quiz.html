@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מבחן מסכם בסטטיסטיקה</title>
+    <style>
+        :root {
+            --primary: #4A90E2;
+            --secondary: #50E3C2;
+            --bg: #F0F4F8;
+            --card-bg: #ffffff;
+            --text: #2C3E50;
+            --success: #27ae60;
+            --error: #e74c3c;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            direction: rtl;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: var(--card-bg);
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            padding: 40px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            border-bottom: 2px solid var(--bg);
+            padding-bottom: 20px;
+        }
+
+        h1 { color: var(--primary); margin: 0; }
+        .subtitle { color: #7f8c8d; margin-top: 10px; }
+
+        .question-card {
+            background: #fff;
+            margin-bottom: 25px;
+            padding: 20px;
+            border: 1px solid #eee;
+            border-radius: 10px;
+            transition: transform 0.2s;
+        }
+
+        .question-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .question-title {
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            color: var(--text);
+        }
+
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .option-label {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            background-color: #fafafa;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .option-label:hover {
+            background-color: #eef2f7;
+            border-color: var(--primary);
+        }
+
+        .option-label input {
+            margin-left: 12px;
+            transform: scale(1.2);
+        }
+
+        .option-label.selected {
+            background-color: #e3f2fd;
+            border-color: var(--primary);
+            font-weight: bold;
+        }
+
+        .btn-submit {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            border-radius: 50px;
+            cursor: pointer;
+            display: block;
+            margin: 40px auto 0;
+            transition: background 0.3s;
+            box-shadow: 0 4px 15px rgba(74, 144, 226, 0.3);
+        }
+
+        .btn-submit:hover {
+            background-color: #357abd;
+            transform: translateY(-2px);
+        }
+
+        #error-msg {
+            color: var(--error);
+            text-align: center;
+            margin-top: 15px;
+            font-weight: bold;
+            display: none;
+        }
+
+        /* Results Section */
+        #results-container {
+            display: none;
+            text-align: center;
+            animation: fadeIn 0.5s;
+        }
+
+        .score-circle {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            margin: 0 auto 30px;
+            box-shadow: 0 10px 20px rgba(74, 144, 226, 0.3);
+        }
+
+        .score-number { font-size: 3.5rem; font-weight: bold; line-height: 1; }
+        .score-label { font-size: 1rem; opacity: 0.9; }
+
+        .feedback-list {
+            text-align: right;
+            margin-top: 30px;
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .mistake-item {
+            border-bottom: 1px solid #eee;
+            padding: 15px 0;
+        }
+        
+        .mistake-topic {
+            color: var(--error);
+            font-weight: bold;
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+            display: inline-block;
+            background: #ffebee;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .copy-btn {
+            background-color: #25D366;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-top: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .copy-btn:hover { background-color: #1ebd53; }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    </style>
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-config.js"></script>
+<script src="js/progress.js"></script>
+
+<div class="container">
+    <header>
+        <h1>מבחן מסכם: יסודות הסטטיסטיקה</h1>
+        <div class="subtitle">25 שאלות | 4 נקודות לשאלה | בהצלחה!</div>
+    </header>
+
+    <form id="quiz-form">
+        <div id="questions-area"></div>
+        <div id="error-msg">⚠️ נא לענות על כל השאלות לפני ההגשה</div>
+        <button type="button" class="btn-submit" onclick="submitQuiz()">הגש מבחן 🏁</button>
+    </form>
+
+    <div id="results-container">
+        <div class="score-circle" id="score-circle">
+            <span class="score-number" id="final-score">0</span>
+            <span class="score-label">ציון סופי</span>
+        </div>
+        
+        <h2>סיכום התוצאות</h2>
+        <p id="result-message"></p>
+
+        <button class="copy-btn" onclick="copyToClipboard()">
+            📋 העתק דוח לשליחה למורה
+        </button>
+
+        <div class="feedback-list" id="feedback-list" style="display:none;">
+            <h3>פירוט השאלות שבהן טעית:</h3>
+            <div id="mistakes-container"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const questions = [
+        // --- אוכלוסייה ומדגם ---
+        {
+            t: "אוכלוסייה ומדגם",
+            q: "חוקר רוצה לבדוק את איכות המים בכל הברזיות בבתי הספר בארץ. הוא דגם 50 בתי ספר. מהי האוכלוסייה?",
+            opts: ["50 בתי הספר שנבדקו", "כל הברזיות בבתי הספר בארץ", "המים בישראל", "החוקר"],
+            a: 1
+        },
+        {
+            t: "אוכלוסייה ומדגם",
+            q: "מהי הסיבה העיקרית שבגללה נשתמש במדגם כדי לבדוק עמידות של גפרורים?",
+            opts: ["האוכלוסייה קטנה מדי", "הבדיקה הורסת את הגפרור", "הגפרורים משתנים כל הזמן", "יותר קל לספור גפרורים במדגם"],
+            a: 1
+        },
+        {
+            t: "אוכלוסייה ומדגם",
+            q: "מדגם הוא:",
+            opts: ["קבוצה חלקית מתוך האוכלוסייה שנבדקת בפועל", "רשימת כל האנשים במחקר", "התוצאה הסופית של המחקר", "המשתנה שאותו מודדים"],
+            a: 0
+        },
+        
+        // --- מדגם מייצג ---
+        {
+            t: "מדגם מייצג",
+            q: "כדי לבדוק מהו הגובה הממוצע של תלמידים בשכבה י', מדדנו רק את נבחרת הכדורסל. המדגם הזה הוא:",
+            opts: ["מדגם אקראי", "מדגם מייצג", "מדגם מוטה (לא מייצג)", "אוכלוסייה שלמה"],
+            a: 2
+        },
+        {
+            t: "מדגם מייצג",
+            q: "איזו שיטה היא הטובה ביותר לקבלת מדגם מייצג של דעות תלמידים?",
+            opts: ["לשאול את החברים שלי בהפסקה", "לפרסם סקר באתר בית הספר שרק מי שרוצה עונה", "להגריל אקראית 5 תלמידים מכל כיתה", "לשאול את המורים"],
+            a: 2
+        },
+        {
+            t: "מדגם מייצג",
+            q: "סקר טלפוני שנערך רק בטלפונים קוויים (ביתיים) עלול להיות לא מייצג כי:",
+            opts: ["אנשים לא אוהבים לענות לטלפון", "הוא לא כולל אנשים שיש להם רק סלולרי (למשל צעירים)", "הוא כולל יותר מדי אנשים", "השאלות בטלפון תמיד קשות"],
+            a: 1
+        },
+
+        // --- תצפית, משתנה, קבוע ---
+        {
+            t: "תצפית ומשתנה",
+            q: "בטבלת נתונים סטנדרטית, מה בדרך כלל מייצגת כל שורה?",
+            opts: ["משתנה", "תצפית", "קבוע", "כותרת"],
+            a: 1
+        },
+        {
+            t: "תצפית ומשתנה",
+            q: "במחקר על עצי תפוז, בדקו לכל עץ: גובה, מספר פירות וכמות מים. מהו 'גובה העץ'?",
+            opts: ["תצפית", "משתנה", "קבוע", "אוכלוסייה"],
+            a: 1
+        },
+        {
+            t: "תצפית ומשתנה",
+            q: "חוקרת בדקה את הגובה של 100 תלמידות מכיתה י'. בטבלה, לכולן כתוב 'י' בעמודת השכבה. מהי השכבה במחקר זה?",
+            opts: ["משתנה", "קבוע", "תצפית", "מדגם"],
+            a: 1
+        },
+        {
+            t: "תצפית ומשתנה",
+            q: "אם בטבלה יש נתונים על 25 מכוניות שונות. כמה תצפיות יש בטבלה?",
+            opts: ["אחת", "25", "תלוי כמה עמודות יש", "אי אפשר לדעת"],
+            a: 1
+        },
+
+        // --- משתנים איכותיים ---
+        {
+            t: "משתנים איכותיים",
+            q: "סוג המשתנה: צבע מכונית (אדום, כחול, לבן)",
+            opts: ["איכותי שמי (Nominal)", "איכותי סדור (Ordinal)", "כמותי בדיד", "כמותי רציף"],
+            a: 0
+        },
+        {
+            t: "משתנים איכותיים",
+            q: "סוג המשתנה: מידת חולצה (S, M, L, XL)",
+            opts: ["איכותי שמי", "איכותי סדור", "כמותי בדיד", "כמותי רציף"],
+            a: 1
+        },
+        {
+            t: "משתנים איכותיים - מוקשים",
+            q: "סוג המשתנה: מספר קו אוטובוס (למשל קו 5, קו 19, קו 480)",
+            opts: ["כמותי בדיד", "כמותי רציף", "איכותי שמי", "איכותי סדור"],
+            a: 2
+        },
+        {
+            t: "משתנים איכותיים - מוקשים",
+            q: "סוג המשתנה: מספר תעודת זהות",
+            opts: ["כמותי בדיד", "כמותי רציף", "איכותי שמי", "איכותי סדור"],
+            a: 2
+        },
+        {
+            t: "משתנים איכותיים",
+            q: "סוג המשתנה: דירוג שביעות רצון (גרוע, סביר, מצוין)",
+            opts: ["איכותי שמי", "איכותי סדור", "כמותי רציף", "תצפית"],
+            a: 1
+        },
+        {
+            t: "משתנים איכותיים",
+            q: "סוג המשתנה: עיר מגורים",
+            opts: ["איכותי שמי", "איכותי סדור", "כמותי", "קבוע"],
+            a: 0
+        },
+
+        // --- משתנים כמותיים ---
+        {
+            t: "משתנים כמותיים",
+            q: "סוג המשתנה: מספר אחים במשפחה",
+            opts: ["כמותי בדיד", "כמותי רציף", "איכותי סדור", "איכותי שמי"],
+            a: 0
+        },
+        {
+            t: "משתנים כמותיים",
+            q: "סוג המשתנה: גובה בסנטימטרים (מדידה מדויקת)",
+            opts: ["כמותי בדיד", "כמותי רציף", "איכותי סדור", "איכותי שמי"],
+            a: 1
+        },
+        {
+            t: "משתנים כמותיים - מוקשים",
+            q: "סוג המשתנה: מספר חדרים בדירה (כולל 2.5 חדרים)",
+            opts: ["כמותי בדיד", "כמותי רציף", "איכותי", "קבוע"],
+            a: 0
+        },
+        {
+            t: "משתנים כמותיים",
+            q: "סוג המשתנה: טמפרטורה בחדר",
+            opts: ["כמותי בדיד", "כמותי רציף", "איכותי סדור", "איכותי שמי"],
+            a: 1
+        },
+        {
+            t: "משתנים כמותיים",
+            q: "סוג המשתנה: מספר תלמידים נוכחים בכיתה",
+            opts: ["כמותי בדיד", "כמותי רציף", "איכותי", "מדגם"],
+            a: 0
+        },
+        {
+            t: "משתנים כמותיים",
+            q: "סוג המשתנה: זמן ריצה במירוץ (בשניות ומאיות)",
+            opts: ["כמותי בדיד", "כמותי רציף", "איכותי סדור", "תצפית"],
+            a: 1
+        },
+        {
+            t: "משתנים כמותיים",
+            q: "סוג המשתנה: מידת נעליים (37, 38, 39...)",
+            opts: ["כמותי בדיד", "כמותי רציף", "איכותי שמי", "איכותי סדור"],
+            a: 0
+        },
+        {
+            t: "משתנים כמותיים",
+            q: "סוג המשתנה: משקל של תינוק",
+            opts: ["כמותי בדיד", "כמותי רציף", "איכותי", "קבוע"],
+            a: 1
+        },
+        {
+            t: "משתנים - כללי",
+            q: "מה ההבדל העיקרי בין כמותי בדיד לכמותי רציף?",
+            opts: ["בדיד זה מספרים קטנים, רציף זה גדולים", "בדיד הוא תוצאה של ספירה, רציף הוא תוצאה של מדידה", "בדיד זה מילים, רציף זה מספרים", "אין הבדל"],
+            a: 1
+        }
+    ];
+
+    // Shuffle questions logic (Optional - currently disabled to keep order logical)
+    // questions.sort(() => Math.random() - 0.5);
+
+    function renderQuiz() {
+        const area = document.getElementById('questions-area');
+        questions.forEach((item, index) => {
+            const card = document.createElement('div');
+            card.className = 'question-card';
+            card.innerHTML = `
+                <div class="question-title">${index + 1}. ${item.q}</div>
+                <div class="options">
+                    ${item.opts.map((opt, i) => `
+                        <label class="option-label" onclick="selectOpt(this)">
+                            <input type="radio" name="q${index}" value="${i}">
+                            <span>${opt}</span>
+                        </label>
+                    `).join('')}
+                </div>
+            `;
+            area.appendChild(card);
+        });
+    }
+
+    function selectOpt(label) {
+        // Handle visual selection
+        const parent = label.parentElement;
+        const labels = parent.getElementsByTagName('label');
+        for (let l of labels) l.classList.remove('selected');
+        label.classList.add('selected');
+    }
+
+    function submitQuiz() {
+        let score = 0;
+        let mistakes = [];
+        let answeredCount = 0;
+
+        // Reset error
+        document.getElementById('error-msg').style.display = 'none';
+
+        questions.forEach((item, index) => {
+            const selected = document.querySelector(`input[name="q${index}"]:checked`);
+            if (selected) {
+                answeredCount++;
+                const val = parseInt(selected.value);
+                if (val === item.a) {
+                    score += 4; // 4 points per question (25 * 4 = 100)
+                } else {
+                    mistakes.push({
+                        q: item.q,
+                        topic: item.t,
+                        correct: item.opts[item.a],
+                        wrong: item.opts[val]
+                    });
+                }
+            }
+        });
+
+        if (answeredCount < questions.length) {
+            document.getElementById('error-msg').style.display = 'block';
+            return;
+        }
+
+        // Show Results
+        document.getElementById('quiz-form').style.display = 'none';
+        document.getElementById('results-container').style.display = 'block';
+        window.scrollTo(0,0);
+
+        // Animate Score
+        const scoreEl = document.getElementById('final-score');
+        const circle = document.getElementById('score-circle');
+        scoreEl.innerText = score;
+
+        if (score >= 90) {
+            circle.style.backgroundColor = '#27ae60';
+            document.getElementById('result-message').innerText = "וואו! ציון מצוין! שולטת בחומר! 🏆";
+        } else if (score >= 70) {
+            circle.style.backgroundColor = '#f39c12';
+            document.getElementById('result-message').innerText = "עבודה יפה! יש הבנה טובה, כדאי לעבור על הטעויות. 👍";
+        } else {
+            circle.style.backgroundColor = '#e74c3c';
+            document.getElementById('result-message').innerText = "כדאי לחזור שוב על החומר ולנסות שנית. 💪";
+        }
+
+        // Process Mistakes
+        if (mistakes.length > 0) {
+            const mistakesContainer = document.getElementById('mistakes-container');
+            document.getElementById('feedback-list').style.display = 'block';
+            
+            mistakes.forEach(m => {
+                const div = document.createElement('div');
+                div.className = 'mistake-item';
+                div.innerHTML = `
+                    <div class="mistake-topic">${m.topic}</div>
+                    <div style="font-weight:bold; margin-bottom:5px;">${m.q}</div>
+                    <div style="color:red">התשובה שסימנת: ${m.wrong}</div>
+                    <div style="color:green">התשובה הנכונה: ${m.correct}</div>
+                `;
+                mistakesContainer.appendChild(div);
+            });
+        }
+
+        // Store report for copy
+        window.quizReport = `היי ענב, סיימתי את המבחן המסכם!\n`;
+        window.quizReport += `הציון שלי: ${score}\n`;
+        if (mistakes.length > 0) {
+            window.quizReport += `טעיתי ב-${mistakes.length} שאלות בנושאים:\n`;
+            const topics = [...new Set(mistakes.map(m => m.topic))];
+            window.quizReport += topics.join(", ") + "\n";
+        } else {
+            window.quizReport += "עניתי על הכל נכון! מוכנה למבחן האמיתי. 😎";
+        }
+    }
+
+    function copyToClipboard() {
+        if (!window.quizReport) return;
+        navigator.clipboard.writeText(window.quizReport).then(() => {
+            alert("הדוח הועתק בהצלחה! עכשיו אפשר להדביק בוואטסאפ.");
+        }).catch(err => {
+            alert("שגיאה בהעתקה, נסי לצלם מסך.");
+        });
+    }
+
+    // Init
+    renderQuiz();
+
+// ===== שילוב פלטפורמת למידה – מודול 8 =====
+const _MOD_INDEX = 8;
+const _MOD_NAME = 'מבחן מסכם – יחידה 1';
+
+document.addEventListener('DOMContentLoaded', function() {
+  initModule(_MOD_INDEX, _MOD_NAME, function(progress) {
+    saveProgress(_MOD_INDEX, 1);
+  });
+});
+
+(function() {
+  var _orig = submitQuiz;
+  submitQuiz = function() {
+    _orig();
+    markComplete(_MOD_INDEX);
+  };
+})();
+
+</script>
+
+</body>
+</html>

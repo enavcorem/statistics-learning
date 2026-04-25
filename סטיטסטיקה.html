@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>לומדת סטטיסטיקה - כיתה י' מידע ונתונים</title>
+    <style>
+        :root {
+            --primary: #6C63FF;
+            --secondary: #2EC4B6;
+            --accent: #FF9F1C;
+            --bg: #F3F4F6;
+            --card-bg: #ffffff;
+            --text: #333333;
+            --success: #28a745;
+            --error: #dc3545;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            width: 100%;
+            max-width: 800px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            overflow: hidden;
+            padding: 30px;
+            padding-bottom: 50px;
+        }
+
+        h1, h2, h3 { color: var(--primary); margin-top: 0; }
+        h1 { text-align: center; border-bottom: 2px solid var(--bg); padding-bottom: 15px; }
+        
+        .progress-bar {
+            width: 100%;
+            background-color: #e0e0e0;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            height: 10px;
+        }
+
+        .progress {
+            height: 10px;
+            background-color: var(--secondary);
+            border-radius: 10px;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .slide { display: none; animation: fadeIn 0.5s; }
+        .slide.active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .concept-box, .example-box, .nuance-box {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            line-height: 1.6;
+        }
+
+        .concept-box { background-color: #F9F9FF; border-right: 5px solid var(--primary); }
+        .example-box { background-color: #E0F7FA; border-right: 5px solid var(--secondary); }
+        .nuance-box { background-color: #FFF3E0; border: 1px dashed var(--accent); font-weight: bold; }
+
+        /* Table Styles */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 0.95rem;
+        }
+        .data-table th, .data-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        .data-table th {
+            background-color: var(--primary);
+            color: white;
+        }
+        .highlight-row {
+            background-color: #fff3cd; /* Yellow highlight for observation */
+            border: 2px solid var(--accent);
+        }
+        .highlight-col {
+            background-color: #d1ecf1; /* Blue highlight for variable */
+        }
+        .table-annotation {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        .arrow-down { font-size: 1.5rem; color: var(--secondary); display: block; text-align: center; }
+        .arrow-right { font-size: 1.5rem; color: var(--accent); vertical-align: middle; }
+
+        /* Quiz Styles */
+        .quiz-section {
+            background-color: #fcfcfc;
+            border: 1px solid #eee;
+            padding: 20px;
+            border-radius: 15px;
+            margin-top: 20px;
+        }
+
+        .question {
+            margin-bottom: 25px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 15px;
+        }
+
+        .options {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .btn-option {
+            background-color: white;
+            border: 2px solid #ddd;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 1rem;
+            flex-grow: 1;
+            text-align: center;
+        }
+
+        .btn-option:hover:not(:disabled) {
+            border-color: var(--primary);
+            background-color: #F0F0FF;
+        }
+
+        .btn-option.correct {
+            background-color: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+            pointer-events: none;
+        }
+
+        .btn-option.wrong {
+            background-color: #f8d7da;
+            border-color: #dc3545;
+            color: #721c24;
+            opacity: 0.6;
+        }
+
+        .feedback {
+            margin-top: 10px;
+            font-weight: bold;
+            min-height: 24px;
+            padding: 5px;
+            border-radius: 5px;
+        }
+        .feedback.error { color: var(--error); }
+        .feedback.success { color: var(--success); }
+
+        .nav-btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            margin-top: 20px;
+            float: left;
+        }
+
+        .nav-btn:hover { background-color: #5a52d5; }
+        .img-icon { font-size: 2rem; vertical-align: middle; margin-left: 10px; }
+
+    </style>
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-config.js"></script>
+<script src="js/progress.js"></script>
+
+<div class="container">
+    <div class="progress-bar">
+        <div class="progress" id="progress"></div>
+    </div>
+
+    <div class="slide active" id="slide1">
+        <h1>ברוכות הבאות ללומדת הסטטיסטיקה! 📊</h1>
+        <p>היי תלמידות יקרות,</p>
+        <p>לפני שאנחנו צוללות למחקרים ולנתונים, נלמד את "שפת הנתונים".</p>
+        <p>בלומדה זו נעבור שלב אחר שלב:</p>
+        <ul>
+            <li>נבין את ההבדל בין אוכלוסייה למדגם.</li>
+            <li>נראה בעיניים מהי תצפית ומהו משתנה בטבלה.</li>
+            <li>נלמד לזהות סוגי משתנים (איכותיים וכמותיים).</li>
+        </ul>
+        <p>בכל שלב יש שאלות תרגול. טעיתן? לא נורא! תוכלו לנסות שוב עד שתצליחו.</p>
+        <button class="nav-btn" onclick="nextSlide(1)">מתחילים! 🚀</button>
+    </div>
+
+    <div class="slide" id="slide2">
+        <h2>1. אוכלוסייה ומדגם</h2>
+        
+        <div class="concept-box">
+            <span class="img-icon">🌍</span> <strong>אוכלוסייה (Population):</strong>
+            הקבוצה <u>המלאה</u> שאותה אנו רוצים לחקור.
+        </div>
+
+        <div class="concept-box">
+            <span class="img-icon">🥄</span> <strong>מדגם (Sample):</strong>
+            קבוצה חלקית ("ביס קטן") מתוך האוכלוסייה, שאותה בודקים בפועל.
+        </div>
+
+        <h3>למה צריך מדגם?</h3>
+        <p>אי אפשר תמיד לבדוק את כל האוכלוסייה בגלל:</p>
+        <ol>
+            <li><strong>עלות וזמן:</strong> לבדוק מיליון איש זה יקר וארוך.</li>
+            <li><strong>בדיקה הורסת:</strong> אם נרצה לבדוק טעם של עוגה, לא נאכל את כל העוגה - כי אז לא יישאר כלום! (חייבים לדגום רק חתיכה).</li>
+        </ol>
+
+        <div class="quiz-section">
+            <h3>בואי נתרגל! 🧠</h3>
+            
+            <div class="question">
+                <p><strong>שאלה 1:</strong> במפעל לייצור נורות רוצים לבדוק אורך חיי נורה (כמה זמן היא דולקת עד שנשרפת). מדוע חייבים להשתמש במדגם?</p>
+                <div class="options">
+                    <button class="btn-option" onclick="checkAnswer(this, true, 'נכון מאוד! אם נבדוק את כולן, כולן יישרפו ולא יהיה מה למכור.')">כי הבדיקה הורסת את הנורה</button>
+                    <button class="btn-option" onclick="checkAnswer(this, false, 'לא מדויק. גם אם יש מעט נורות, אם נבדוק את כולן - לא יישאר מה למכור.')">כי יש מעט נורות במפעל</button>
+                    <button class="btn-option" onclick="checkAnswer(this, false, 'מחיר הוא שיקול, אבל כאן יש בעיה חמורה יותר - הבדיקה משמידה את המוצר.')">כי הנורות יקרות מדי</button>
+                </div>
+                <div class="feedback"></div>
+            </div>
+
+            <div class="question">
+                <p><strong>שאלה 2:</strong> מנהלת ביה"ס רוצה לדעת מה המנה המועדפת בקפיטריה. היא שואלת את כל 30 התלמידות בכיתה י'5. מהי אוכלוסיית המחקר שמעניינת את המנהלת?</p>
+                <div class="options">
+                    <button class="btn-option" onclick="checkAnswer(this, false, 'שימי לב: י\'5 הן הקבוצה שנשאלה בפועל (המדגם), אבל המנהלת רוצה לדעת על כולם.')">תלמידות י'5 בלבד</button>
+                    <button class="btn-option" onclick="checkAnswer(this, true, 'מצוין! המנהלת רוצה להסיק מסקנות לגבי כל ביה&quot;ס, ולכן כולם הם האוכלוסייה.')">כל תלמידי בית הספר</button>
+                    <button class="btn-option" onclick="checkAnswer(this, false, 'האוכל הוא נושא המחקר, לא האנשים שאותם חוקרים.')">האוכל בקפיטריה</button>
+                </div>
+                <div class="feedback"></div>
+            </div>
+        </div>
+
+        <button class="nav-btn" onclick="nextSlide(2)">המשך לנושא הבא ⬅</button>
+    </div>
+
+    <div class="slide" id="slide3">
+        <h2>2. המדגם המייצג</h2>
+        <p>כדי שנוכל להסיק מסקנות מהמדגם על כל האוכלוסייה, המדגם חייב להיות <strong>מייצג</strong>.</p>
+        <p>הוא צריך להיות "מיקרו-קוסמוס" (העתק מוקטן) של האוכלוסייה ולכלול את כל הסוגים שקיימים בה.</p>
+
+        <div class="quiz-section">
+            <div class="question">
+                <p><strong>שאלה 1:</strong> חוקרת רוצה לבדוק הרגלי שינה של נוער בישראל. היא מפרסמת שאלון בפורום "גיימרים בלילה". האם המדגם מייצג?</p>
+                <div class="options">
+                    <button class="btn-option" onclick="checkAnswer(this, false, 'זה נכון שהם נוער, אבל הם קבוצה מאוד ספציפית שאולי ישנה פחות מאחרים. זה לא מייצג את כולם.')">כן, כי גיימרים הם בני נוער</button>
+                    <button class="btn-option" onclick="checkAnswer(this, true, 'בדיוק! גיימרים שנמצאים בפורום בלילה כנראה ישנים בשעות שונות מרוב הנוער. המדגם מוטה.')">לא, כי גיימרים כנראה ישנים פחות משאר הנוער</button>
+                </div>
+                <div class="feedback"></div>
+            </div>
+
+            <div class="question">
+                <p><strong>שאלה 2:</strong> כדי לבדוק שביעות רצון מטיול שנתי, המורה הגרילה באקראי 5 בנות מכל כיתה בשכבה ושאלה אותן. האם זה כיוון טוב למדגם מייצג?</p>
+                <div class="options">
+                    <button class="btn-option" onclick="checkAnswer(this, true, 'נכון! בחירה אקראית מכל הכיתות מבטיחה ייצוג הוגן למגוון דעות.')">כן, הבחירה אקראית וכוללת את כל הכיתות</button>
+                    <button class="btn-option" onclick="checkAnswer(this, false, 'להפך, מועצת התלמידים היא קבוצה קטנה ופעילה שלא תמיד מייצגת את התלמיד הממוצע.')">לא, צריך לשאול רק את מועצת התלמידים</button>
+                </div>
+                <div class="feedback"></div>
+            </div>
+        </div>
+
+        <button class="nav-btn" onclick="nextSlide(3)">המשך למשתנים ⬅</button>
+    </div>
+
+    <div class="slide" id="slide4">
+        <h2>3. תצפית, משתנה וקבוע - בואו נראה בעיניים</h2>
+        <p>הדרך הכי טובה להבין את המושגים היא להסתכל על טבלת נתונים.</p>
+        
+        <div class="example-box">
+            <strong>סיפור המקרה:</strong> החוקרת מדדה נתונים של 3 תלמידות מתוך <strong>שכבת כיתה י'</strong>.
+        </div>
+
+        <div style="position: relative; overflow-x: auto;">
+             <div class="table-annotation" style="text-align: center;">👇 העמודות הן <strong>המשתנים</strong> (מה שמשתנה בין הבנות) 👇</div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>שם התלמידה</th>
+                        <th class="highlight-col">גובה (ס"מ)</th>
+                        <th>צבע עיניים</th>
+                        <th>מספר אחים</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>דנה</td>
+                        <td class="highlight-col">165</td>
+                        <td>חום</td>
+                        <td>2</td>
+                    </tr>
+                    <tr class="highlight-row">
+                        <td><strong>נועה</strong></td>
+                        <td class="highlight-col"><strong>170</strong></td>
+                        <td><strong>כחול</strong></td>
+                        <td><strong>1</strong></td>
+                    </tr>
+                    <tr>
+                        <td>מיכל</td>
+                        <td class="highlight-col">160</td>
+                        <td>חום</td>
+                        <td>3</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="concept-box">
+            <ul>
+                <li><span class="arrow-right">👉</span> <strong>תצפית (Observation):</strong> השורה המסומנת בצהוב. כל שורה היא "מקרה" אחד או ילדה אחת שבדקנו (נועה עם כל הנתונים שלה).</li>
+                <li><span class="arrow-down">👇</span> <strong>משתנה (Variable):</strong> העמודות. למשל "גובה". אצל דנה הוא 165, אצל נועה 170. הערך <strong>משתנה</strong> מילדה לילדה.</li>
+                <li>🔒 <strong>קבוע (Constant):</strong> מה שלא מופיע בטבלה כי הוא זהה לכולן. בדוגמה שלנו: <strong>שכבת כיתה י'</strong>. זה לא משתנה בין דנה, נועה ומיכל - כולן בי'.</li>
+            </ul>
+        </div>
+
+        <div class="quiz-section">
+            <h3>תרגול הבנת הטבלה:</h3>
+            
+            <div class="question">
+                <p><strong>שאלה 1:</strong> תסתכלי בטבלה למעלה על העמודה "צבע עיניים". מהו המושג המתאים לה?</p>
+                <div class="options">
+                    <button class="btn-option" onclick="checkAnswer(this, true, 'נכון מאוד! צבע עיניים משתנה מבת לבת ולכן הוא משתנה.')">משתנה</button>
+                    <button class="btn-option" onclick="checkAnswer(this, false, 'תצפית היא שורה שלמה (ילדה אחת), לא עמודה שלמה.')">תצפית</button>
+                    <button class="btn-option" onclick="checkAnswer(this, false, 'הצבע לא זהה אצל כולן (יש חום ויש כחול), לכן הוא לא קבוע.')">קבוע</button>
+                </div>
+                <div class="feedback"></div>
+            </div>
+
+            <div class="question">
+                <p><strong>שאלה 2:</strong> כמה <u>תצפיות</u> יש בטבלה הזו?</p>
+                <div class="options">
+                    <button class="btn-option" onclick="checkAnswer(this, true, 'בול! יש 3 שורות של נתונים (דנה, נועה ומיכל), כלומר 3 תצפיות.')">3 תצפיות</button>
+                    <button class="btn-option" onclick="checkAnswer(this, false, 'זהו מספר העמודות (המשתנים). התצפיות הן השורות.')">4 תצפיות</button>
+                    <button class="btn-option" onclick="checkAnswer(this, false, 'יש כאן טבלה אחת, אבל בתוכה יש נתונים על 3 בנות שונות.')">תצפית אחת</button>
+                </div>
+                <div class="feedback"></div>
+            </div>
+
+            <div class="question">
+                <p><strong>שאלה 3:</strong> אם נוסיף לטבלה את "שכבת כיתה" ולכולן יהיה כתוב "י", מה זה יהיה?</p>
+                <div class="options">
+                    <button class="btn-option" onclick="checkAnswer(this, true, 'נכון! כיוון שלכולן יש בדיוק אותו ערך, זהו קבוע במחקר הזה.')">קבוע</button>
+                    <button class="btn-option" onclick="checkAnswer(this, false, 'משתנה חייב... להשתנות! אם לכולן יש אותו ערך, זה לא משתנה.')">משתנה</button>
+                </div>
+                <div class="feedback"></div>
+            </div>
+
+             <div class="question">
+                <p><strong>שאלה 4:</strong> במחקר אחר בדקו 100 עצי אבוקדו וספרו פירות. מהו "עץ מספר 5" בטבלה?</p>
+                <div class="options">
+                    <button class="btn-option" onclick="checkAnswer(this, true, 'מעולה! העץ הספציפי הוא התצפית (השורה) בטבלה.')">תצפית</button>
+                    <button class="btn-option" onclick="checkAnswer(this, false, 'זן האבוקדו אולי קבוע, אבל העץ הספציפי הוא האובייקט הנחקר.')">קבוע</button>
+                </div>
+                <div class="feedback"></div>
+            </div>
+
+        </div>
+
+        <button class="nav-btn" onclick="nextSlide(4)">המשך לסוגי משתנים ⬅</button>
+    </div>
+
+    <div class="slide" id="slide5">
+        <h2>4. משתנה איכותי (קטגורי)</h2>
+        <p>משתנה שמתאר תכונה במילים. אי אפשר לעשות עליו חישובים (כמו ממוצע).</p>
+        
+        <div class="concept-box">
+            <strong>1. איכותי שמי (Nominal):</strong> סתם שמות ללא סדר. (צבע עיניים, עיר).
+        </div>
+        <div class="concept-box">
+            <strong>2. איכותי סדור (Ordinal):</strong> יש משמעות לסדר/דירוג. (מידות S/M/L, דרגות בצבא).
+        </div>
+
+        <div class="nuance-box">
+            🛑 <strong>שימו לב: מספר יכול להיות משתנה איכותי!</strong> <br>
+            למשל: <strong>מספר קו אוטובוס (קו 5, קו 67)</strong>.<br>
+            המספר הוא רק "שם" של הקו. קו 100 הוא לא "פי 2 יותר טוב" מקו 50. לכן זהו משתנה איכותי שמי.
+        </div>
+
+        <div class="quiz-section">
+            <h3>תרגול סיווג:</h3>
+            
+            <div class="question">
+                <p><strong>שאלה 1:</strong> מיקום בתחרות ריצה (מקום 1, מקום 2, מקום 3).</p>
+                <div class="options">
+                    <button class="btn-option" onclick="checkAnswer(this, false, 'לא מדויק. האם יש חשיבות למי הגיע ראשון ומי שני? כן! יש כאן סדר.')">איכותי שמי</button>
+                    <button class="btn-option" onclick="checkAnswer(this, true, 'נכון! זהו תיאור מילולי (ראשון/שני) שיש לו סדר ברור.')">איכותי סדור</button>
+                </div>
+                <div class="feedback"></div>
+            </div>
+
+            <div class="question">
+                <p><strong>שאלה 2:</strong> מספר הרישוי של הרכב (לוחית זיהוי).</p>
+                <div class="options">
+                    <button class="btn-option" onclick="checkAnswer(this, true, 'בול! המספר הוא רק מזהה (כמו שם), אין לו משמעות כמותית.')">איכותי שמי</button>
+                    <button class="btn-option" onclick="checkAnswer(this, false, 'האם רכב עם מספר גבוה יותר הוא רכב טוב יותר או מהיר יותר? לא. זה רק זיהוי.')">כמותי</button>
+                    <button class="btn-option" onclick="checkAnswer(this, false, 'אין שום סדר הגיוני בין מספרי רישוי, זה סתם מספר סידורי אקראי.')">איכותי סדור</button>
+                </div>
+                <div class="feedback"></div>
+            </div>
+        </div>
+
+        <button class="nav-btn" onclick="nextSlide(5)">המשך למשתנים כמותיים ⬅</button>
+    </div>
+
+    <div class="slide" id="slide6">
+        <h2>5. משתנה כמותי (מספרי)</h2>
+        <p>כאן למספר יש משמעות של כמות (אפשר לחבר ולחסר).</p>
+        
+        <div class="concept-box">
+            <strong>1. כמותי רציף:</strong> תוצאה של <u>מדידה</u> (גובה, משקל, זמן). יכול לקבל כל ערך (1.5, 1.57, 1.579).
+        </div>
+        <div class="concept-box">
+            <strong>2. כמותי בדיד:</strong> תוצאה של <u>ספירה</u>. בא בקפיצות (מספר ילדים, מספר כסאות).
+        </div>
+
+        <div class="nuance-box">
+            🏠 <strong>הדוגמה של החדרים:</strong><br>
+            "מספר חדרים בבית" הוא <strong>בדיד</strong>, גם אם יש 3.5 חדרים.<br>
+            למה? כי אנחנו "סופרים" חדרים. אין דירה של 3.57 חדרים. הקפיצות הן קבועות (חצי או שלם). זה לא רצף אינסופי כמו מדידת גובה.
+        </div>
+
+        <div class="quiz-section">
+            <div class="question">
+                <p><strong>שאלה 1:</strong> משקל של תינוק בלידה.</p>
+                <div class="options">
+                    <button class="btn-option" onclick="checkAnswer(this, false, 'משקל מודדים על משקל, והוא יכול להיות 3.501 ק&quot;ג. זה רצף.')">בדיד</button>
+                    <button class="btn-option" onclick="checkAnswer(this, true, 'נכון! משקל זו מדידה, ולכן זה רציף.')">רציף</button>
+                </div>
+                <div class="feedback"></div>
+            </div>
+
+            <div class="question">
+                <p><strong>שאלה 2:</strong> מספר התלמידות שנמצאות בכיתה כרגע.</p>
+                <div class="options">
+                    <button class="btn-option" onclick="checkAnswer(this, true, 'נכון! אנחנו סופרים תלמידות (1, 2, 3...). אי אפשר חצי תלמידה.')">בדיד</button>
+                    <button class="btn-option" onclick="checkAnswer(this, false, 'האם אפשר למדוד 12.53 תלמידות? לא, רק סופרים שלמים.')">רציף</button>
+                </div>
+                <div class="feedback"></div>
+            </div>
+
+             <div class="question">
+                <p><strong>שאלה 3:</strong> מספר חדרים בדירה (כולל חצאי חדרים).</p>
+                <div class="options">
+                    <button class="btn-option" onclick="checkAnswer(this, true, 'מצוין! למרות שיש חצאים (2.5), הערכים הם קבועים וספירים, לכן זה בדיד.')">בדיד</button>
+                    <button class="btn-option" onclick="checkAnswer(this, false, 'זה מבלבל, אבל מכיוון שאין כל ערך אפשרי (אין 3.12 חדרים), זה לא רציף.')">רציף</button>
+                </div>
+                <div class="feedback"></div>
+            </div>
+        </div>
+
+        <button class="nav-btn" onclick="nextSlide(6)">לסיכום 🏁</button>
+    </div>
+
+    <div class="slide" id="slide7">
+        <h1>כל הכבוד! 🎉</h1>
+        <p>סיימת את הלומדה הבסיסית בהצלחה.</p>
+        <p>עכשיו המושגים: אוכלוסייה, מדגם, תצפית ומשתנים אמורים להיות ברורים יותר.</p>
+        <p><strong>מה הלאה?</strong></p>
+        <p>כעת תעברו לדף המושגים והתרגול המסכם, שם נראה אם אתן שולטות בחומר!</p>
+        <div style="text-align: center; margin-top: 30px;">
+            <span style="font-size: 5rem;">🏆</span>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    let currentSlide = 1;
+    const totalSlides = 7;
+
+    function updateProgress() {
+        const percentage = ((currentSlide - 1) / (totalSlides - 1)) * 100;
+        document.getElementById('progress').style.width = percentage + '%';
+    }
+
+    function nextSlide(current) {
+        document.getElementById('slide' + current).classList.remove('active');
+        currentSlide = current + 1;
+        document.getElementById('slide' + currentSlide).classList.add('active');
+        updateProgress();
+        window.scrollTo(0, 0);
+    }
+
+    function checkAnswer(btn, isCorrect, feedbackText) {
+        const parent = btn.parentElement;
+        const feedbackDiv = parent.nextElementSibling;
+        
+        // Reset styles for specific button
+        btn.classList.remove('correct', 'wrong');
+
+        if (isCorrect) {
+            // Correct Answer Logic
+            btn.classList.add('correct');
+            feedbackDiv.innerHTML = feedbackText + " 🎉";
+            feedbackDiv.className = 'feedback success';
+            
+            // Disable other buttons ONLY when correct answer is found
+            const buttons = parent.getElementsByTagName('button');
+            for (let b of buttons) {
+                if (b !== btn) {
+                    b.disabled = true;
+                    b.style.opacity = "0.5";
+                }
+            }
+        } else {
+            // Wrong Answer Logic
+            btn.classList.add('wrong');
+            feedbackDiv.innerHTML = feedbackText + " 🤔 נסי שוב!";
+            feedbackDiv.className = 'feedback error';
+            // We DO NOT disable buttons here, allowing retry
+        }
+    }
+</script>
+
+
+<script>
+// ===== שילוב פלטפורמת למידה – מודול 1 =====
+const _MOD_INDEX = 1;
+const _MOD_NAME = 'מבוא לסטטיסטיקה';
+
+document.addEventListener('DOMContentLoaded', function() {
+  initModule(_MOD_INDEX, _MOD_NAME, function(progress) {
+    if (progress && progress.status !== 'completed' && progress.last_slide > 1) {
+      _jumpToSlide(progress.last_slide);
+    } else if (!progress) {
+      saveProgress(_MOD_INDEX, 1);
+    }
+  });
+});
+
+// עוטפים את nextSlide הקיים כדי לשמור התקדמות
+(function() {
+  var _orig = nextSlide;
+  nextSlide = function(current) {
+    _orig(current);
+    saveProgress(_MOD_INDEX, currentSlide);
+    if (currentSlide === totalSlides) markComplete(_MOD_INDEX);
+  };
+})();
+
+function _jumpToSlide(n) {
+  document.querySelectorAll('.slide').forEach(function(s) { s.classList.remove('active'); });
+  currentSlide = n;
+  var el = document.getElementById('slide' + n);
+  if (el) el.classList.add('active');
+  updateProgress();
+}
+</script>
+</body>
+</html>

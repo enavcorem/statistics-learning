@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>חקר שינויים במדדים (מתוקן ומפורט)</title>
+    <style>
+        :root {
+            --primary: #2980b9;
+            --secondary: #8e44ad;
+            --accent: #f39c12;
+            --bg: #ecf0f1;
+            --card-bg: #ffffff;
+            --text: #2c3e50;
+            --success: #27ae60;
+            --error: #c0392b;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            direction: rtl;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: var(--card-bg);
+            border-radius: 15px;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.1);
+            overflow: hidden;
+            min-height: 800px;
+            position: relative;
+            padding-bottom: 80px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #3498db 0%, #2c3e50 100%);
+            padding: 20px;
+            color: white;
+            text-align: center;
+        }
+
+        .progress-bar { background-color: #bdc3c7; height: 8px; width: 100%; }
+        .progress-fill { background-color: var(--accent); height: 100%; width: 0%; transition: width 0.4s ease; }
+
+        .slide { display: none; padding: 30px; animation: fadeIn 0.5s; }
+        .slide.active { display: block; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        h2 { color: var(--primary); border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 0; }
+        
+        .scenario-box {
+            background-color: #e8f6f3;
+            border-right: 5px solid var(--primary);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 1.1rem;
+        }
+
+        .data-viz {
+            background: white;
+            border: 2px dashed #bdc3c7;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .numbers-row {
+            font-size: 1.6rem;
+            letter-spacing: 3px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin: 10px 0;
+        }
+
+        .rule-box {
+            background-color: #fff3e0;
+            border: 2px solid var(--accent);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 30px;
+            display: none;
+            animation: fadeIn 1s;
+        }
+
+        .question-container {
+            margin-top: 25px;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+
+        .q-text { font-weight: bold; margin-bottom: 15px; font-size: 1.1rem; }
+
+        .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+
+        .btn-opt {
+            background: white; border: 2px solid #ddd; padding: 15px;
+            border-radius: 8px; font-size: 1rem; cursor: pointer; transition: all 0.2s; text-align: center;
+        }
+
+        .btn-opt:hover:not(:disabled) { border-color: var(--primary); background: #f4faff; }
+        .btn-opt.correct { background-color: #d4edda; border-color: var(--success); color: #155724; }
+        .btn-opt.wrong { background-color: #f8d7da; border-color: var(--error); color: #721c24; opacity: 0.7; }
+
+        .feedback { margin-top: 15px; padding: 10px; border-radius: 5px; font-weight: bold; display: none; }
+
+        .nav-btn {
+            background-color: var(--text); color: white; border: none;
+            padding: 12px 30px; border-radius: 50px; font-size: 1.1rem;
+            cursor: pointer; margin-top: 15px; display: inline-block;
+        }
+
+        .start-btn { display: block; width: 100%; margin-top: 30px; background-color: var(--primary); }
+
+        .pro-tip {
+            font-size: 0.9rem; color: #555; background: #f9f9f9; padding: 10px;
+            border-radius: 5px; margin-top: 10px; border-right: 3px solid #888;
+        }
+        
+        .stat-card {
+            display: inline-block; background: white; padding: 15px; border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin: 10px; font-size: 0.95rem;
+            vertical-align: top; width: 40%; border-top: 4px solid #ccc;
+        }
+
+    </style>
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-config.js"></script>
+<script src="js/progress.js"></script>
+
+<div class="container">
+    <div class="header">
+        <h1>מעבדת החקר: שינויים במדדים 🔬</h1>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
+
+    <div class="slide active" id="slide0">
+        <h2>ברוכות הבאות למעבדה! 🧪</h2>
+        <p>היום נבצע 5 ניסויים כדי להבין מה קורה למדדים כשמשנים את הנתונים.</p>
+        <p>בכל ניסוי נבדוק בנפרד:</p>
+        <ul>
+            <li><strong>מדדי מרכז:</strong> ממוצע וחציון.</li>
+            <li><strong>מדדי פיזור:</strong> טווח, סטיית תקן ושונות.</li>
+        </ul>
+        <button class="nav-btn start-btn" onclick="nextSlide()">מתחילים בניסוי הראשון ⬅</button>
+    </div>
+
+    <div class="slide" id="slide1">
+        <h2>ניסוי 1: הפקטור (הוספת קבוע)</h2>
+        <div class="scenario-box">
+            המורה נתנה <strong>5 נקודות בונוס</strong> לכל התלמידות.
+        </div>
+        <div class="data-viz">
+            <div>לפני: 70, 80, 90 (ממוצע 80)</div>
+            <div style="font-size:2rem;">⬇</div>
+            <div>אחרי: 75, 85, 95</div>
+        </div>
+
+        <div class="question-container" id="q1_1">
+            <div class="q-text">1. מה קרה לממוצע החדש?</div>
+            <div class="options-grid">
+                <button class="btn-opt" onclick="check(this, true, 'q1_1', 'נכון! הממוצע עלה מ-80 ל-85 (בדיוק ב-5).')">עלה ב-5</button>
+                <button class="btn-opt" onclick="check(this, false, 'q1_1', 'לא נשאר אותו דבר. כל הציונים עלו!')">נשאר ללא שינוי</button>
+            </div>
+            <div class="feedback"></div>
+        </div>
+
+        <div class="question-container" id="q1_2" style="display:none; opacity:0.5;">
+            <div class="q-text">2. מה קרה לחציון (האמצעי)?</div>
+            <div class="options-grid">
+                <button class="btn-opt" onclick="check(this, false, 'q1_2', 'האמצעי היה 80, עכשיו הוא 85. הוא השתנה!')">נשאר 80</button>
+                <button class="btn-opt" onclick="check(this, true, 'q1_2', 'בול! גם החציון זז יחד עם כולם ב-5 צעדים.')">עלה ב-5</button>
+            </div>
+            <div class="feedback"></div>
+        </div>
+
+        <div class="question-container" id="q1_3" style="display:none; opacity:0.5;">
+            <div class="q-text">3. מה קרה למדדי הפיזור (טווח, סטיית תקן ושונות)?</div>
+            <div class="options-grid">
+                <button class="btn-opt" onclick="check(this, true, 'q1_3', 'מצוין! כולם זזו יחד, המרווחים נשמרו. אף מדד פיזור לא השתנה.')">לא השתנו כלל</button>
+                <button class="btn-opt" onclick="check(this, false, 'q1_3', 'למה שיגדלו? המרחק בין 75 ל-95 הוא עדיין 20, בדיוק כמו קודם.')">גדלו ב-5</button>
+            </div>
+            <div class="feedback"></div>
+        </div>
+
+        <div class="rule-box" id="rule1">
+            <strong>📝 מסקנה - הוספת קבוע:</strong><br>
+            <ul>
+                <li><strong>מרכז (ממוצע, חציון):</strong> גדלים ב-5.</li>
+                <li><strong>פיזור (טווח, סטיית תקן, שונות):</strong> לא משתנים! (הגרף זז, לא נמתח).</li>
+            </ul>
+            <div style="margin-top:15px; text-align: left;">
+                <button class="nav-btn" onclick="nextSlide()">לניסוי הבא ⬅</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="slide" id="slide2">
+        <h2>ניסוי 2: הכפלה (פי 2)</h2>
+        <div class="scenario-box">
+            נתונים: <strong>2, 4, 6</strong> (ממוצע 4, טווח 4).<br>
+            הכפלנו את כולם <strong>פי 10</strong>.
+        </div>
+        <div class="data-viz">
+            <div>אחרי ההכפלה: 20, 40, 60</div>
+        </div>
+
+        <div class="question-container" id="q2_1">
+            <div class="q-text">1. מה קרה לממוצע ולחציון?</div>
+            <div class="options-grid">
+                <button class="btn-opt" onclick="check(this, false, 'q2_1', 'לא. הממוצע החדש הוא 40 (ולא 14).')">גדלו ב-10</button>
+                <button class="btn-opt" onclick="check(this, true, 'q2_1', 'נכון! הם הפכו ל-40. גדלו פי 10.')">הוכפלו פי 10</button>
+            </div>
+            <div class="feedback"></div>
+        </div>
+
+        <div class="question-container" id="q2_2" style="display:none; opacity:0.5;">
+            <div class="q-text">2. מה קרה לטווח ולסטיית התקן? (שימי לב למרווחים)</div>
+            <div class="options-grid">
+                <button class="btn-opt" onclick="check(this, false, 'q2_2', 'טעות נפוצה! בכפל, הפערים גדלים.')">נשארו אותו דבר</button>
+                <button class="btn-opt" onclick="check(this, true, 'q2_2', 'בדיוק! קודם הפער היה 4, עכשיו הפער 40. הם הוכפלו פי 10.')">הוכפלו פי 10</button>
+            </div>
+            <div class="feedback"></div>
+        </div>
+
+        <div class="question-container" id="q2_3" style="display:none; opacity:0.5;">
+            <div class="q-text">3. זהירות! מה קרה לשונות? (שהיא סטיית התקן בריבוע)</div>
+            <div class="options-grid">
+                <button class="btn-opt" onclick="check(this, true, 'q2_3', 'כל הכבוד! השונות היא ריבועית, לכן היא גדלה פי 100 (10 בריבוע).')">גדלה פי 100 (10²)</button>
+                <button class="btn-opt" onclick="check(this, false, 'q2_3', 'זהירות! סטיית התקן גדלה פי 10, אבל השונות היא בריבוע...')">גדלה פי 10</button>
+            </div>
+            <div class="feedback"></div>
+        </div>
+
+        <div class="rule-box" id="rule2">
+            <strong>📝 מסקנה - כפל בקבוע:</strong><br>
+            <ul>
+                <li><strong>מרכז:</strong> מוכפלים.</li>
+                <li><strong>טווח וסטיית תקן:</strong> מוכפלים! (הגרף נמתח).</li>
+                <li><strong>שונות:</strong> מוכפלת בריבוע (כי היא שטח).</li>
+            </ul>
+            <div style="margin-top:15px; text-align: left;">
+                <button class="nav-btn" onclick="nextSlide()">לניסוי הבא ⬅</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="slide" id="slide3">
+        <h2>ניסוי 3: התלמיד החדש (הצטרפות)</h2>
+        <div class="scenario-box">
+            הממוצע הכיתתי כרגע הוא <strong>80</strong>.<br>
+            מצטרף תלמיד חדש לכיתה.
+        </div>
+
+        <div class="question-container" id="q3_1">
+            <div class="q-text">מקרה א': התלמיד החדש קיבל <strong>80</strong> (כמו הממוצע). האם הממוצע ישתנה?</div>
+            <div class="options-grid">
+                <button class="btn-opt" onclick="check(this, true, 'q3_1', 'נכון! הוא לא מושך לא למעלה ולא למטה.')">לא ישתנה</button>
+                <button class="btn-opt" onclick="check(this, false, 'q3_1', 'למה שישתנה? זה אותו ערך בדיוק.')">כן, ישתנה</button>
+            </div>
+            <div class="feedback"></div>
+        </div>
+
+        <div class="question-container" id="q3_2" style="display:none; opacity:0.5;">
+            <div class="q-text">מקרה ב': התלמיד החדש קיבל <strong>100</strong>. לאיזה כיוון יזוז הממוצע?</div>
+            <div class="options-grid">
+                <button class="btn-opt" onclick="check(this, true, 'q3_2', 'נכון! הציון הגבוה מושך את הממוצע כלפי מעלה.')">יעלה</button>
+                <button class="btn-opt" onclick="check(this, false, 'q3_2', 'הוא קיבל מעל הממוצע, אז הוא חייב להשפיע לטובה.')">ירד</button>
+            </div>
+            <div class="feedback"></div>
+        </div>
+
+        <div class="question-container" id="q3_3" style="display:none; opacity:0.5;">
+            <div class="q-text">שאלה חשובה: אם התלמיד קיבל <strong>80</strong> (כמו הממוצע), מה קרה למדדי הפיזור?</div>
+            <div class="options-grid">
+                <button class="btn-opt" onclick="check(this, false, 'q3_3', 'להפך. הוספנו מישהו שנמצא בול במרכז, זה מחזק את האחידות.')">הפיזור יגדל</button>
+                <button class="btn-opt" onclick="check(this, true, 'q3_3', 'גאוני! הוספנו נתון שהוא בול בממוצע, אז הוספנו ״שקט״ למערכת. הפיזור (סטיית התקן) יורד.')">הפיזור יקטן</button>
+            </div>
+            <div class="feedback"></div>
+        </div>
+
+        <div class="rule-box" id="rule3">
+            <strong>📝 מסקנה - הוספת נתון:</strong><br>
+            נתון חדש תמיד "מושך" את הממוצע לכיוון שלו.<br>
+            אם הנתון שווה לממוצע -> הפיזור קטן (יותר יציבות).
+            <div style="margin-top:15px; text-align: left;">
+                <button class="nav-btn" onclick="nextSlide()">לניסוי החדש ⬅</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="slide" id="slide4">
+        <h2>ניסוי 4: "לזרוק את הנכשל" (הורדת נתון)</h2>
+        <div class="scenario-box">
+            יש לנו 3 ציונים: <strong>40, 80, 90</strong> (הממוצע הוא 70).<br>
+            המורה החליטה לבטל את הציון הכי נמוך (40).
+        </div>
+        <div class="data-viz">
+            נשארו הציונים: 80, 90.
+        </div>
+
+        <div class="question-container" id="q4_1">
+            <div class="q-text">1. מה קרה לממוצע החדש?</div>
+            <div class="options-grid">
+                <button class="btn-opt" onclick="check(this, true, 'q4_1', 'נכון! (80+90)/2 = 85. הממוצע זינק מ-70 ל-85 כי נפטרנו מהמשקולת הכבדה.')">עלה</button>
+                <button class="btn-opt" onclick="check(this, false, 'q4_1', 'להפך. הורדנו ציון גרוע, אז המצב השתפר.')">ירד</button>
+            </div>
+            <div class="feedback"></div>
+        </div>
+
+        <div class="question-container" id="q4_2" style="display:none; opacity:0.5;">
+            <div class="q-text">2. מה קרה לטווח ולסטיית התקן? (הוצאנו את 40 שהיה רחוק מאוד)</div>
+            <div class="options-grid">
+                <button class="btn-opt" onclick="check(this, false, 'q4_2', 'לא. הציון 40 היה הילד הבעייתי שרחוק מכולם. בלעדיו הכיתה יותר מגובשת.')">הפיזור גדל</button>
+                <button class="btn-opt" onclick="check(this, true, 'q4_2', 'נכון מאוד! הוצאנו גורם קיצוני, אז הנתונים שנשארו (80,90) קרובים זה לזה. הפיזור קטן.')">הפיזור יקטן</button>
+            </div>
+            <div class="feedback"></div>
+        </div>
+
+        <div class="rule-box" id="rule4">
+            <strong>📝 מסקנה - הורדת נתון:</strong><br>
+            הורדת ערך נמוך -> הממוצע עולה.<br>
+            הורדת ערך קיצוני (רחוק) -> הפיזור קטן.
+            <div style="margin-top:15px; text-align: left;">
+                <button class="nav-btn" onclick="nextSlide()">לניסוי האחרון ⬅</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="slide" id="slide5">
+        <h2>ניסוי 5: תיקון טעות (שינוי ערך)</h2>
+        <div class="scenario-box">
+            הממוצע היה <strong>80</strong>.<br>
+            גילינו טעות: ציון של תלמיד תוקן מ-<strong>60</strong> ל-<strong>90</strong>.<br>
+            (כל שאר הציונים נשארו אותו דבר).
+        </div>
+
+        <div class="question-container" id="q5_1">
+            <div class="q-text">1. מה יקרה לממוצע?</div>
+            <div class="options-grid">
+                <button class="btn-opt" onclick="check(this, false, 'q5_1', 'סכום הציונים הכללי גדל ב-30 נקודות, אז הממוצע חייב לגדול.')">יישאר אותו דבר</button>
+                <button class="btn-opt" onclick="check(this, true, 'q5_1', 'נכון! הסכום הכולל גדל, ולכן הממוצע גדל.')">יגדל</button>
+            </div>
+            <div class="feedback"></div>
+        </div>
+
+        <div class="question-container" id="q5_2" style="display:none; opacity:0.5;">
+            <div class="q-text">2. מה קרה לפיזור (סטיית התקן)? (הממוצע הישן 80. הציון השתנה מ-60 ל-90)</div>
+            <div class="pro-tip">טיפ: הציון 60 היה רחוק מהממוצע (מרחק 20). הציון 90 קרוב לממוצע (מרחק 10).</div>
+            <div class="options-grid">
+                <button class="btn-opt" onclick="check(this, true, 'q5_2', 'חשיבה מעולה! התלמיד התקרב למרכז הכיתה, ולכן הפיזור הכללי קטן.')">הפיזור קטן</button>
+                <button class="btn-opt" onclick="check(this, false, 'q5_2', 'שים לב: הציון החדש (90) קרוב יותר לממוצע (80) מאשר הציון הישן (60).')">הפיזור גדל</button>
+            </div>
+            <div class="feedback"></div>
+        </div>
+
+        <div class="rule-box" id="rule5">
+            <strong>📝 מסקנה - שינוי ערך:</strong><br>
+            אם הערך גדל -> הממוצע גדל.<br>
+            הפיזור תלוי בשאלה: האם התקרבנו לממוצע (פיזור יורד) או התרחקנו ממנו (פיזור עולה)?
+            <div style="margin-top:15px; text-align: left;">
+                <button class="nav-btn" onclick="nextSlide()">סיכום סופי 🏁</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="slide" id="slide6">
+        <h2>סיימת את כל הניסויים! 🎓</h2>
+        <p>עכשיו את מומחית לשינויים בנתונים.</p>
+        
+        <div style="display:flex; flex-wrap:wrap; justify-content:center;">
+            <div class="stat-card" style="border-top: 4px solid var(--primary)">
+                <strong>הוספת קבוע (+):</strong><br>
+                מרכז זז.<br>פיזור קפוא.
+            </div>
+            <div class="stat-card" style="border-top: 4px solid var(--secondary)">
+                <strong>כפל בקבוע (×):</strong><br>
+                הכל משתנה.<br>(גם מרכז וגם פיזור).
+            </div>
+            <div class="stat-card" style="border-top: 4px solid var(--accent)">
+                <strong>הוספת/הורדת נתון:</strong><br>
+                מושך את הממוצע אליו.<br>
+                אם זורקים קיצון -> הפיזור קטן.
+            </div>
+            <div class="stat-card" style="border-top: 4px solid var(--error)">
+                <strong>תיקון ערך:</strong><br>
+                אם התקרבנו לממוצע - הפיזור ירד.<br>אם התרחקנו - הפיזור עלה.
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top:40px; font-size:4rem;">🏆</div>
+    </div>
+
+</div>
+
+<script>
+    let currentSlide = 0;
+    const totalSlides = 7; // 0 to 6
+
+    // Map slides to their questions sequence
+    const slideFlow = {
+        'slide1': ['q1_1', 'q1_2', 'q1_3', 'rule1'],
+        'slide2': ['q2_1', 'q2_2', 'q2_3', 'rule2'],
+        'slide3': ['q3_1', 'q3_2', 'q3_3', 'rule3'],
+        'slide4': ['q4_1', 'q4_2', 'rule4'],
+        'slide5': ['q5_1', 'q5_2', 'rule5']
+    };
+
+    function nextSlide() {
+        if(document.getElementById('slide' + currentSlide)) {
+            document.getElementById('slide' + currentSlide).classList.remove('active');
+        }
+        currentSlide++;
+        if(document.getElementById('slide' + currentSlide)) {
+            document.getElementById('slide' + currentSlide).classList.add('active');
+            updateProgress();
+            // Scroll to top
+            window.scrollTo(0,0);
+        }
+    }
+
+    function updateProgress() {
+        const p = (currentSlide / (totalSlides - 1)) * 100;
+        document.getElementById('progress').style.width = p + '%';
+    }
+
+    function check(btn, isCorrect, questionId, text) {
+        const feedbackDiv = btn.parentElement.nextElementSibling;
+        const parentDiv = btn.parentElement;
+        
+        // Disable sibling buttons
+        const allBtns = parentDiv.querySelectorAll('button');
+        allBtns.forEach(b => {
+            b.disabled = true;
+            if (b !== btn) b.style.opacity = 0.5;
+        });
+
+        feedbackDiv.style.display = 'block';
+
+        if (isCorrect) {
+            btn.classList.add('correct');
+            feedbackDiv.innerHTML = text + " ✅";
+            feedbackDiv.style.color = "green";
+            
+            // Advance logic
+            const currentSlideId = 'slide' + currentSlide;
+            const flow = slideFlow[currentSlideId];
+            if (flow) {
+                const currentIndex = flow.indexOf(questionId);
+                if (currentIndex !== -1 && currentIndex < flow.length - 1) {
+                    const nextElemId = flow[currentIndex + 1];
+                    setTimeout(() => {
+                        const el = document.getElementById(nextElemId);
+                        if(el) {
+                            el.style.display = 'block';
+                            el.style.opacity = 1;
+                            el.scrollIntoView({behavior: "smooth", block: "center"});
+                        }
+                    }, 1200);
+                }
+            }
+
+        } else {
+            btn.classList.add('wrong');
+            feedbackDiv.innerHTML = text + " ❌ <br><button onclick='resetQuestion(\"" + questionId + "\")' style='margin-top:5px; cursor:pointer; background:#fff; border:1px solid #ccc; padding:2px 8px; border-radius:4px;'>נסה שוב</button>";
+            feedbackDiv.style.color = "#c0392b";
+        }
+    }
+
+    window.resetQuestion = function(qId) {
+        const container = document.getElementById(qId);
+        const btns = container.querySelectorAll('.btn-opt');
+        const feedback = container.querySelector('.feedback');
+        
+        btns.forEach(b => {
+            b.disabled = false;
+            b.style.opacity = 1;
+            b.classList.remove('wrong');
+            b.classList.remove('correct');
+        });
+        
+        feedback.style.display = 'none';
+        feedback.innerHTML = '';
+    };
+
+</script>
+
+
+<script>
+// ===== שילוב פלטפורמת למידה – מודול 6 =====
+// לומדה זו משתמשת ב-0-indexed slides (slide0 עד slide6, totalSlides=7)
+const _MOD_INDEX = 6;
+const _MOD_NAME = 'חקר שינויים במדדים';
+
+document.addEventListener('DOMContentLoaded', function() {
+  initModule(_MOD_INDEX, _MOD_NAME, function(progress) {
+    var lastSlide = progress && progress.status !== 'completed' ? (progress.last_slide || 0) : 0;
+    if (lastSlide > 0) _jumpToSlide(lastSlide);
+    else saveProgress(_MOD_INDEX, 0);
+  });
+});
+
+(function() {
+  var _orig = nextSlide;
+  nextSlide = function() {
+    _orig();
+    saveProgress(_MOD_INDEX, currentSlide);
+    if (currentSlide === totalSlides - 1) markComplete(_MOD_INDEX);
+  };
+})();
+
+function _jumpToSlide(n) {
+  var current = document.getElementById('slide' + currentSlide);
+  if (current) current.classList.remove('active');
+  currentSlide = n;
+  var el = document.getElementById('slide' + n);
+  if (el) el.classList.add('active');
+  updateProgress();
+}
+</script>
+</body>
+</html>

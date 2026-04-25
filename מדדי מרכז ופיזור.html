@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מרכז הלמידה - סטטיסטיקה (גרסה סופית)</title>
+    <style>
+        :root {
+            --primary: #4A90E2;       /* כחול למרכז */
+            --dispersion: #9b59b6;    /* סגול לפיזור */
+            --excel: #217346;         /* ירוק אקסל */
+            --bg: #F0F4F8;
+            --card-bg: #ffffff;
+            --text: #2C3E50;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            direction: rtl;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: var(--card-bg);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+            min-height: 600px;
+            position: relative;
+        }
+
+        /* --- Header --- */
+        header {
+            background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+            padding: 30px;
+            text-align: center;
+            border-bottom: 1px solid #ddd;
+        }
+
+        h1 { margin: 0; color: var(--text); font-size: 2rem; }
+        .subtitle { color: #7f8c8d; margin-top: 5px; }
+
+        /* --- Main Menu --- */
+        .category-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 40px;
+        }
+
+        .category-card {
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+            color: white;
+        }
+
+        .cat-center { background: linear-gradient(135deg, #4A90E2 0%, #0072ff 100%); }
+        .cat-dispersion { background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%); }
+
+        .category-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+        .cat-icon { font-size: 4rem; display: block; margin-bottom: 10px; }
+        .cat-title { font-size: 1.8rem; font-weight: bold; }
+
+        /* --- Sub Menu --- */
+        .sub-menu {
+            display: none;
+            padding: 30px;
+        }
+
+        .sub-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .topic-btn {
+            background: white;
+            border: 2px solid #eee;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .topic-btn:hover { border-color: var(--primary); background: #f9f9f9; }
+        .topic-icon { font-size: 2rem; display: block; margin-bottom: 10px; }
+        .topic-name { font-weight: bold; font-size: 1.1rem; }
+
+        /* --- Content Area --- */
+        .content-area {
+            display: none;
+            padding: 30px;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .story-box {
+            background-color: #fff8e1;
+            border-right: 5px solid #ffc107;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+        
+        .story-title { font-weight: bold; color: #d35400; display: block; margin-bottom: 5px; font-size: 1.2rem; }
+
+        .definition-highlight {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px dashed #4A90E2;
+            margin-top: 15px;
+            font-size: 0.95rem;
+        }
+
+        .math-concept {
+            background: #f3e5f5;
+            padding: 15px;
+            border-radius: 8px;
+            border-right: 4px solid #9b59b6;
+            margin-top: 15px;
+            font-size: 0.95rem;
+        }
+
+        .manual-task {
+            background-color: #f0f4f8;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            border-left: 5px solid var(--primary);
+        }
+
+        .excel-section {
+            border: 2px solid #c8e6c9;
+            background-color: #e8f5e9;
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .excel-table {
+            background: white;
+            border-collapse: collapse;
+            margin: 10px auto;
+            font-family: sans-serif;
+            font-size: 0.9rem;
+        }
+        .excel-table td, .excel-table th { border: 1px solid #ccc; padding: 5px 15px; text-align: center; }
+        .excel-table th { background: #f0f0f0; }
+
+        .formula-display {
+            font-family: 'Consolas', monospace;
+            background: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            color: var(--excel);
+            font-weight: bold;
+            direction: ltr;
+            display: inline-block;
+        }
+
+        input[type="number"], input[type="text"] {
+            padding: 8px;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+            font-size: 1rem;
+            text-align: center;
+        }
+        input[type="text"] { width: 100%; font-family: 'Consolas', monospace; direction: ltr; }
+
+        .btn-check {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        
+        .feedback { margin-top: 10px; font-weight: bold; min-height: 24px; }
+
+        .nav-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+
+        .back-btn {
+            background: none;
+            border: none;
+            font-size: 1rem;
+            cursor: pointer;
+            color: #666;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .back-btn:hover { color: var(--primary); }
+
+    </style>
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-config.js"></script>
+<script src="js/progress.js"></script>
+
+<div class="container">
+    <header>
+        <h1>ארגז הכלים של הסטטיסטיקה 🧰</h1>
+        <div class="subtitle">לומדה אינטראקטיבית לכיתה י'</div>
+    </header>
+
+    <div id="main-menu" class="category-grid">
+        <div class="category-card cat-center" onclick="showSubMenu('center')">
+            <span class="cat-icon">🎯</span>
+            <div class="cat-title">מדדי מרכז</div>
+            <div>איפה ה"אמצע" של הנתונים?</div>
+        </div>
+        <div class="category-card cat-dispersion" onclick="showSubMenu('dispersion')">
+            <span class="cat-icon">🌊</span>
+            <div class="cat-title">מדדי פיזור</div>
+            <div>כמה הנתונים "משוגעים"?</div>
+        </div>
+    </div>
+    <div style="text-align:center; margin-top:28px;">
+        <button id="btn-complete-module4" onclick="_completeModule4()" style="
+            padding:12px 28px; background:#28a745; color:#fff; border:none;
+            border-radius:12px; font-size:1rem; font-weight:bold; cursor:pointer;
+            font-family:inherit; transition:background 0.2s;">
+            ✅ סיימתי לומדה זו
+        </button>
+    </div>
+
+    <div id="sub-menu" class="sub-menu">
+        <div class="nav-header">
+            <button class="back-btn" onclick="goHome()">➜ חזרה לראשי</button>
+            <h2 id="category-title" style="margin:0; color:var(--primary);"></h2>
+        </div>
+        <div id="topic-grid" class="sub-grid"></div>
+    </div>
+
+    <div id="content-area" class="content-area">
+        <div class="nav-header">
+            <button class="back-btn" onclick="goBackToSub()">➜ חזרה לנושאים</button>
+            <h2 id="topic-title" style="margin:0;"></h2>
+        </div>
+
+        <div class="story-box">
+            <span class="story-title" id="story-icon-title"></span>
+            <div id="story-text"></div>
+            <div id="extra-html"></div> </div>
+
+        <div class="manual-task" id="manual-section">
+            <h3>🧠 בדיקת הבנה (חישוב בראש)</h3>
+            <div id="manual-instruction" style="margin-bottom:10px; font-weight:bold; color:#555;"></div>
+            <p id="manual-q" style="font-size:1.1rem;"></p>
+            <input type="number" id="manual-input" placeholder="?">
+            <button class="btn-check" onclick="checkManual()">בדיקה</button>
+            <div id="manual-feedback" class="feedback"></div>
+        </div>
+
+        <div id="excel-container" class="excel-section" style="display:none;">
+            <h3 style="color:var(--excel); margin-top:0;">🖥️ עכשיו באקסל</h3>
+            <p id="excel-desc"></p>
+            
+            <table class="excel-table">
+                <tr><th></th><th>A</th></tr>
+                <tbody id="excel-rows"></tbody>
+            </table>
+
+            <p>כתבי את הנוסחה לטווח <strong>A1:A4</strong>:</p>
+            <input type="text" id="excel-input" placeholder="=FORMULA(...)">
+            <button class="btn-check" style="background-color:var(--excel);" onclick="checkExcel()">בדיקה</button>
+            <div id="excel-feedback" class="feedback"></div>
+            
+            <div style="margin-top:20px; text-align:left;">
+                <button class="back-btn" onclick="goBackToSub()" style="color:var(--excel); font-weight:bold;">סיימתי, חזרה לנושאים ✔</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- Data Base ---
+    const data = {
+        center: {
+            title: "מדדי מרכז",
+            color: "#4A90E2",
+            topics: [
+                {
+                    id: "mean",
+                    name: "ממוצע",
+                    icon: "⚖️",
+                    storyTitle: "הממוצע: מרכז הכובד",
+                    story: "הממוצע לוקח את כל המספרים ומחלק אותם שווה בשווה. <br><strong>רגישות:</strong> הוא רגיש מאוד לקיצון. אם יש ציון 0 אחד, הוא ימשוך את כל הממוצע למטה.",
+                    manualTasks: [
+                        { q: "ציונים: 80, 90, 100. מה הממוצע?", a: 90, hint: "חברי את שלושתם וחלק ב-3." }
+                    ],
+                    excelDesc: "הפונקציה היא <span class='formula-display'>AVERAGE(range)</span>.",
+                    excelData: [80, 90, 100, 70],
+                    excelCorrect: "=AVERAGE(A1:A4)"
+                },
+                {
+                    id: "median",
+                    name: "חציון",
+                    icon: "🛡️",
+                    storyTitle: "החציון: שומר הראש",
+                    story: "הערך שנמצא בדיוק באמצע, כשמסדרים את הנתונים מהקטן לגדול.",
+                    // שילבנו כאן את ההסבר שאהבת במיוחד
+                    extraHtml: `
+                        <div class="definition-highlight">
+                            <strong>🛡️ חסין לקיצון!</strong><br>
+                            החציון לא מתרגש ממספרים קיצוניים. הוא מסתכל רק על המיקום באמצע.<br><br>
+                            <strong>איך מחשבים ידנית?</strong><br>
+                            1. <u>מסדרים</u> מהקטן לגדול (חובה!).<br>
+                            2. <u>במספר אי-זוגי</u> (למשל 3 נתונים): לוקחים את האמצעי.<br>
+                            3. <u>במספר זוגי</u> (למשל 4 נתונים): לוקחים את ה-2 שבאמצע ועושים להם ממוצע.
+                        </div>
+                    `,
+                    manualTasks: [
+                        { q: "שלב 1 (אי זוגי): נתונים: 2, 10, 5. סדרי אותם ומצאי את החציון.", a: 5, hint: "הסדר הוא 2, 5, 10. מי באמצע?" },
+                        { q: "שלב 2 (זוגי): נתונים: 2, 8, 4, 10. סדרי ומצאי חציון.", a: 6, hint: "הסדר: 2, 4, 8, 10. האמצעיים הם 4 ו-8. מה הממוצע שלהם?" }
+                    ],
+                    excelDesc: "באקסל לא צריך לסדר! הפונקציה <span class='formula-display'>MEDIAN(range)</span> עושה הכל לבד.",
+                    excelData: [10, 2, 8, 100], 
+                    excelCorrect: "=MEDIAN(A1:A4)"
+                },
+                {
+                    id: "mode",
+                    name: "שכיח",
+                    icon: "🌟",
+                    storyTitle: "השכיח: הכוכב הפופולרי",
+                    story: "הערך שמופיע הכי הרבה פעמים ברשימה.",
+                    manualTasks: [
+                        { q: "נתונים: 7, 2, 7, 8, 7, 5. מה השכיח?", a: 7, hint: "מי מופיע הכי הרבה?" }
+                    ],
+                    excelDesc: "הפונקציה היא <span class='formula-display'>MODE(range)</span>.",
+                    excelData: [7, 7, 8, 2],
+                    excelCorrect: "=MODE(A1:A4)"
+                }
+            ]
+        },
+        dispersion: {
+            title: "מדדי פיזור",
+            color: "#9b59b6",
+            topics: [
+                {
+                    id: "range",
+                    name: "טווח",
+                    icon: "↔️",
+                    storyTitle: "הטווח: המרחק מקצה לקצה",
+                    story: "ההפרש בין ההצלחה הכי גדולה לכישלון הכי גדול. זה המקסימום פחות המינימום.",
+                    manualTasks: [
+                        { q: "הנה רשימה מבולגנת: 12, 5, 20, 2. מצאו את המקסימום והמינימום וחשבו טווח.", a: 18, hint: "המקסימום הוא 20. המינימום הוא 2. כמה זה 20 פחות 2?" }
+                    ],
+                    excelDesc: "אין נוסחה אחת. עושים תרגיל חיסור: <span class='formula-display'>MAX(range) - MIN(range)</span>",
+                    excelData: [12, 5, 20, 2],
+                    excelCorrect: "=MAX(A1:A4)-MIN(A1:A4)"
+                },
+                {
+                    id: "stdev",
+                    name: "שונות וסטיית תקן",
+                    icon: "📉",
+                    storyTitle: "שונות וסטיית תקן: המנוע והתוצאה",
+                    story: `סטיית התקן היא המדד החשוב ביותר. היא בודקת <strong>"כמה רחוקים בממוצע מהממוצע?"</strong>.
+                            
+
+[Image of Standard Deviation bell curve distribution]
+
+                            `,
+                    // הוספנו כאן את ההסבר המתמטי על השונות + ההסבר הויזואלי שאהבת
+                    extraHtml: `
+                        <div class="definition-highlight">
+                            ✅ <strong>המדד הכי חשוב.</strong> לוקח בחשבון את כל הנתונים.<br>
+                            סטייה נמוכה = יציבות. סטייה גבוהה = פיזור.
+                        </div>
+                        <div class="math-concept">
+                            <strong>רגע, מה זו "שונות"?</strong><br>
+                            אם סתם נחבר את המרחקים מהממוצע (למשל: 5 מעל ו-5 מתחת), נקבל 0. זה לא עוזר לנו!<br>
+                            לכן:
+                            <ol>
+                                <li>מעלים כל מרחק בריבוע (כדי שיהיה חיובי). התוצאה נקראת <strong>שונות</strong>.</li>
+                                <li>בסוף עושים שורש כדי לחזור למספרים רגילים. זוהי <strong>סטיית התקן</strong>.</li>
+                            </ol>
+                        </div>
+                    `,
+                    manualTasks: [
+                        { q: "בכיתה שבה כולם קיבלו 80 בדיוק. מה סטיית התקן? (כמה הם רחוקים מהממוצע?)", a: 0, hint: "אם כולם על הממוצע, המרחק הוא אפס." }
+                    ],
+                    excelDesc: "הפונקציה מחשבת הכל לבד! <span class='formula-display'>STDEV.P(range)</span> (ה-P לאוכלוסייה).",
+                    excelData: [70, 80, 90, 100],
+                    excelCorrect: "=STDEV.P(A1:A4)"
+                },
+                {
+                    id: "iqr",
+                    name: "טווח בין-רבעוני",
+                    icon: "📦",
+                    storyTitle: "הטווח הבין-רבעוני (IQR)",
+                    story: "אם נזרוק את הקיצוניים ביותר (25% הכי נמוכים ו-25% הכי גבוהים), נישאר עם ה'לב' של הכיתה. זהו מדד יציב שלא מושפע מקיצון.",
+                    manualTasks: [
+                        { q: "רבעון עליון (Q3) הוא 90. רבעון תחתון (Q1) הוא 60. מה הטווח הבין רבעוני? (ההפרש ביניהם)", a: 30, hint: "90 פחות 60." }
+                    ],
+                    excelDesc: "נוסחה למתקדמים: <span class='formula-display'>QUARTILE(range, 3) - QUARTILE(range, 1)</span>",
+                    excelData: [50, 60, 70, 80, 90],
+                    excelCorrect: "=QUARTILE(A1:A4,3)-QUARTILE(A1:A4,1)"
+                }
+            ]
+        }
+    };
+
+    let currentCategory = null;
+    let currentTopic = null;
+    let currentManualTaskIndex = 0;
+
+    function showSubMenu(catId) {
+        currentCategory = data[catId];
+        document.getElementById('main-menu').style.display = 'none';
+        document.getElementById('sub-menu').style.display = 'block';
+        document.getElementById('category-title').innerText = currentCategory.title;
+        document.getElementById('category-title').style.color = currentCategory.color;
+
+        const grid = document.getElementById('topic-grid');
+        grid.innerHTML = '';
+        currentCategory.topics.forEach(topic => {
+            grid.innerHTML += `
+                <div class="topic-btn" onclick="loadTopic('${topic.id}')">
+                    <span class="topic-icon">${topic.icon}</span>
+                    <div class="topic-name">${topic.name}</div>
+                </div>`;
+        });
+    }
+
+    function goHome() {
+        document.getElementById('sub-menu').style.display = 'none';
+        document.getElementById('content-area').style.display = 'none';
+        document.getElementById('main-menu').style.display = 'grid';
+    }
+
+    function goBackToSub() {
+        document.getElementById('content-area').style.display = 'none';
+        document.getElementById('sub-menu').style.display = 'block';
+    }
+
+    function loadTopic(topicId) {
+        currentTopic = currentCategory.topics.find(t => t.id === topicId);
+        currentManualTaskIndex = 0;
+
+        document.getElementById('sub-menu').style.display = 'none';
+        document.getElementById('content-area').style.display = 'block';
+
+        // Fill Content
+        document.getElementById('topic-title').innerText = currentTopic.name;
+        document.getElementById('story-icon-title').innerText = currentTopic.icon + " " + currentTopic.storyTitle;
+        document.getElementById('story-text').innerHTML = currentTopic.story;
+        
+        // Add Extra HTML if exists (Definitions, Math concepts)
+        const extraContainer = document.getElementById('extra-html');
+        if (currentTopic.extraHtml) {
+            extraContainer.innerHTML = currentTopic.extraHtml;
+            extraContainer.style.display = 'block';
+        } else {
+            extraContainer.style.display = 'none';
+        }
+        
+        // Setup Excel (Hidden)
+        document.getElementById('excel-container').style.display = 'none';
+        document.getElementById('excel-desc').innerHTML = currentTopic.excelDesc;
+        document.getElementById('excel-input').value = '';
+        document.getElementById('excel-input').disabled = false;
+        document.getElementById('excel-feedback').innerText = '';
+        
+        // Build Mini Excel Table
+        const tbody = document.getElementById('excel-rows');
+        tbody.innerHTML = '';
+        currentTopic.excelData.forEach((val, index) => {
+            tbody.innerHTML += `<tr><th>${index + 1}</th><td>${val}</td></tr>`;
+        });
+
+        // Load First Manual Task
+        loadManualTask();
+    }
+
+    function loadManualTask() {
+        const task = currentTopic.manualTasks[currentManualTaskIndex];
+        const totalTasks = currentTopic.manualTasks.length;
+        
+        document.getElementById('manual-section').style.display = 'block';
+        if (totalTasks > 1) {
+            document.getElementById('manual-instruction').innerText = `שלב ${currentManualTaskIndex + 1} מתוך ${totalTasks}`;
+        } else {
+            document.getElementById('manual-instruction').innerText = "";
+        }
+        
+        document.getElementById('manual-q').innerText = task.q;
+        document.getElementById('manual-input').value = '';
+        document.getElementById('manual-input').disabled = false;
+        document.getElementById('manual-feedback').innerText = '';
+    }
+
+    function checkManual() {
+        const userVal = parseFloat(document.getElementById('manual-input').value);
+        const feedback = document.getElementById('manual-feedback');
+        const task = currentTopic.manualTasks[currentManualTaskIndex];
+        
+        if (userVal === task.a) {
+            feedback.innerHTML = "תשובה נכונה! 🎉";
+            feedback.style.color = "green";
+            document.getElementById('manual-input').disabled = true;
+
+            // Check if there are more manual tasks
+            if (currentManualTaskIndex < currentTopic.manualTasks.length - 1) {
+                setTimeout(() => {
+                    currentManualTaskIndex++;
+                    loadManualTask();
+                }, 1500);
+            } else {
+                // All manual tasks done -> Show Excel
+                setTimeout(() => {
+                     document.getElementById('manual-section').style.display = 'none';
+                     document.getElementById('excel-container').style.display = 'block';
+                }, 1000);
+            }
+
+        } else {
+            feedback.innerHTML = "לא בדיוק. רמז: " + task.hint;
+            feedback.style.color = "red";
+        }
+    }
+
+    function checkExcel() {
+        const input = document.getElementById('excel-input');
+        const feedback = document.getElementById('excel-feedback');
+        
+        let userVal = input.value.toUpperCase().replace(/\s/g, '');
+        let correctVal = currentTopic.excelCorrect.toUpperCase().replace(/\s/g, '');
+        
+        // Allow MODE.SNGL alias
+        if (currentTopic.id === 'mode' && userVal.includes('MODE.SNGL')) {
+             correctVal = userVal; 
+        }
+
+        if (userVal === correctVal) {
+            feedback.innerHTML = "מצוין! הנוסחה תקינה ✅";
+            feedback.style.color = "green";
+            input.disabled = true;
+        } else {
+            feedback.innerHTML = "שגיאה בתחביר. ודאי שימוש ב = ובסוגריים ()";
+            feedback.style.color = "red";
+        }
+    }
+
+</script>
+
+
+<script>
+// ===== שילוב פלטפורמת למידה – מודול 4 =====
+const _MOD_INDEX = 4;
+const _MOD_NAME = 'מדדי מרכז ופיזור';
+
+document.addEventListener('DOMContentLoaded', function() {
+  initModule(_MOD_INDEX, _MOD_NAME, function(progress) {
+    saveProgress(_MOD_INDEX, 1);
+    if (progress && progress.status === 'completed') {
+      var btn = document.getElementById('btn-complete-module4');
+      if (btn) { btn.textContent = '✅ כבר הושלם'; btn.style.background = '#aaa'; btn.disabled = true; }
+    }
+  });
+});
+
+async function _completeModule4() {
+  await markComplete(_MOD_INDEX);
+  location.href = 'index.html';
+}
+</script>
+</body>
+</html>

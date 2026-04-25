@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מבחן מסכם: טבלאות שכיחות</title>
+    <style>
+        :root {
+            --primary: #4A90E2;
+            --secondary: #50E3C2;
+            --bg: #F0F4F8;
+            --card-bg: #ffffff;
+            --text: #2C3E50;
+            --success: #27ae60;
+            --error: #e74c3c;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            direction: rtl;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: var(--card-bg);
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            padding: 40px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            border-bottom: 2px solid var(--bg);
+            padding-bottom: 20px;
+        }
+
+        h1 { color: var(--primary); margin: 0; }
+        .subtitle { color: #7f8c8d; margin-top: 10px; }
+
+        .question-card {
+            background: #fff;
+            margin-bottom: 25px;
+            padding: 20px;
+            border: 1px solid #eee;
+            border-radius: 10px;
+            transition: transform 0.2s;
+        }
+
+        .question-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .question-title {
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            color: var(--text);
+        }
+
+        .table-example {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+            font-size: 0.9rem;
+        }
+        .table-example th, .table-example td {
+            border: 1px solid #ddd;
+            padding: 5px;
+            text-align: center;
+        }
+        .table-example th { background-color: #eee; }
+
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .option-label {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            background-color: #fafafa;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .option-label:hover {
+            background-color: #eef2f7;
+            border-color: var(--primary);
+        }
+
+        .option-label input {
+            margin-left: 12px;
+            transform: scale(1.2);
+        }
+
+        .option-label.selected {
+            background-color: #e3f2fd;
+            border-color: var(--primary);
+            font-weight: bold;
+        }
+
+        .btn-submit {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            border-radius: 50px;
+            cursor: pointer;
+            display: block;
+            margin: 40px auto 0;
+            transition: background 0.3s;
+            box-shadow: 0 4px 15px rgba(74, 144, 226, 0.3);
+        }
+
+        .btn-submit:hover {
+            background-color: #357abd;
+            transform: translateY(-2px);
+        }
+
+        #error-msg {
+            color: var(--error);
+            text-align: center;
+            margin-top: 15px;
+            font-weight: bold;
+            display: none;
+        }
+
+        /* Results Section */
+        #results-container {
+            display: none;
+            text-align: center;
+            animation: fadeIn 0.5s;
+        }
+
+        .score-circle {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            margin: 0 auto 30px;
+            box-shadow: 0 10px 20px rgba(74, 144, 226, 0.3);
+        }
+
+        .score-number { font-size: 3.5rem; font-weight: bold; line-height: 1; }
+        .score-label { font-size: 1rem; opacity: 0.9; }
+
+        .feedback-list {
+            text-align: right;
+            margin-top: 30px;
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .mistake-item {
+            border-bottom: 1px solid #eee;
+            padding: 15px 0;
+        }
+        
+        .mistake-topic {
+            color: var(--error);
+            font-weight: bold;
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+            display: inline-block;
+            background: #ffebee;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .copy-btn {
+            background-color: #25D366;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-top: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .copy-btn:hover { background-color: #1ebd53; }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    </style>
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-config.js"></script>
+<script src="js/progress.js"></script>
+
+<div class="container">
+    <header>
+        <h1>מבחן מסכם: טבלאות שכיחות</h1>
+        <div class="subtitle">15 שאלות | עני ברוגע ובתשומת לב | בהצלחה!</div>
+    </header>
+
+    <form id="quiz-form">
+        <div id="questions-area"></div>
+        <div id="error-msg">⚠️ נא לענות על כל השאלות לפני ההגשה</div>
+        <button type="button" class="btn-submit" onclick="submitQuiz()">הגש מבחן וקבל ציון 🏁</button>
+    </form>
+
+    <div id="results-container">
+        <div class="score-circle" id="score-circle">
+            <span class="score-number" id="final-score">0</span>
+            <span class="score-label">ציון סופי</span>
+        </div>
+        
+        <h2>סיכום התוצאות</h2>
+        <p id="result-message"></p>
+
+        <button class="copy-btn" onclick="copyToClipboard()">
+            📋 העתק דוח לשליחה לענב
+        </button>
+
+        <div class="feedback-list" id="feedback-list" style="display:none;">
+            <h3>פירוט השאלות שבהן טעית:</h3>
+            <div id="mistakes-container"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const questions = [
+        // --- שכיחות בסיסית ---
+        {
+            t: "שכיחות בסיסית",
+            q: "נתונה הרשימה: 5, 2, 5, 8, 5, 2. מהי השכיחות של המספר 5?",
+            opts: ["2", "3", "5", "6"],
+            a: 1 // 3 פעמים
+        },
+        {
+            t: "שכיחות בסיסית",
+            q: "אם השכיחות של הציון 100 היא 4, מה זה אומר?",
+            opts: ["ש-4 תלמידים קיבלו ציון 100", "שהציון הוא 100", "ש-100 תלמידים קיבלו ציון 4", "שזה 4% מהכיתה"],
+            a: 0
+        },
+
+        // --- שכיחות יחסית ---
+        {
+            t: "שכיחות יחסית",
+            q: "בכיתה של 20 תלמידים, ל-5 תלמידים יש כלב. מהי השכיחות היחסית (באחוזים) של בעלי הכלבים?",
+            opts: ["5%", "20%", "25%", "50%"],
+            a: 2 // 5/20 = 25%
+        },
+        {
+            t: "שכיחות יחסית",
+            q: "מה חייב להיות סכום כל השכיחויות היחסיות בטבלה תקינה?",
+            opts: ["תמיד 10 (או 10%)", "תמיד 100 (או 100%)", "זה תלוי במספר התלמידים", "תמיד 50%"],
+            a: 1
+        },
+
+        // --- שכיחות מצטברת (הבנה וחישוב) ---
+        {
+            t: "שכיחות מצטברת",
+            q: "מהי המשמעות של 'שכיחות מצטברת' עבור הערך 80?",
+            opts: ["כמה תלמידים קיבלו בדיוק 80", "כמה תלמידים קיבלו 80 ומטה (עד 80 כולל)", "כמה תלמידים קיבלו מעל 80", "כמה תלמידים נכשלו במבחן"],
+            a: 1
+        },
+        {
+            t: "שכיחות מצטברת - חישוב",
+            html: `
+            <table class='table-example'>
+                <tr><th>ציון</th><th>שכיחות</th><th>מצטברת</th></tr>
+                <tr><td>60</td><td>3</td><td>3</td></tr>
+                <tr><td>70</td><td>5</td><td><strong>?</strong></td></tr>
+            </table>
+            מה המספר שחסר בטבלה?`,
+            opts: ["5", "8", "15", "2"],
+            a: 1 // 3+5=8
+        },
+        {
+            t: "שכיחות מצטברת - חישוב",
+            html: `
+            <table class='table-example'>
+                <tr><th>ציון</th><th>שכיחות</th><th>מצטברת</th></tr>
+                <tr><td>50</td><td>2</td><td>2</td></tr>
+                <tr><td>60</td><td>4</td><td>6</td></tr>
+                <tr><td>70</td><td>3</td><td><strong>?</strong></td></tr>
+            </table>
+            מה המספר החסר?`,
+            opts: ["6", "9", "3", "12"],
+            a: 1 // 6+3=9
+        },
+        {
+            t: "שכיחות מצטברת - הפוך",
+            q: "שאלה מאתגרת: אם השכיחות המצטברת בשורה השנייה היא 10, ובשורה הראשונה היא 4. מהי השכיחות הרגילה של השורה השנייה?",
+            opts: ["6", "14", "10", "4"],
+            a: 0 // 10-4=6
+        },
+        {
+            t: "שכיחות מצטברת - הבנה",
+            q: "השכיחות המצטברת האחרונה בטבלה תמיד שווה ל...",
+            opts: ["0", "100", "סה\"כ התצפיות (N)", "לשכיחות הגדולה ביותר"],
+            a: 2
+        },
+
+        // --- שכיחות יחסית מצטברת ---
+        {
+            t: "יחסית מצטברת",
+            q: "אם השכיחות היחסית המצטברת של ציון 70 היא 60%. מה זה אומר?",
+            opts: ["ש-60% מהתלמידים קיבלו בדיוק 70", "ש-60% מהתלמידים קיבלו ציון 70 או פחות", "ש-60% מהתלמידים נכשלו", "ש-40% מהתלמידים קיבלו 70"],
+            a: 1
+        },
+        {
+            t: "יחסית מצטברת",
+            html: `
+            <table class='table-example'>
+                <tr><th>ציון</th><th>יחסית</th><th>יחסית מצטברת</th></tr>
+                <tr><td>8</td><td>20%</td><td>20%</td></tr>
+                <tr><td>9</td><td>30%</td><td><strong>?</strong></td></tr>
+            </table>`,
+            opts: ["30%", "10%", "50%", "100%"],
+            a: 2
+        },
+
+        // --- קשר לגרף ---
+        {
+            t: "טבלה וגרף",
+            q: "בגרף עמודות, מה קובע את גובה העמודה?",
+            opts: ["הערך של המשתנה (הציון)", "השכיחות (כמה קיבלו את הציון)", "השכיחות המצטברת", "מספר העמודות בגרף"],
+            a: 1
+        },
+        {
+            t: "טבלה וגרף",
+            q: "אם נוסיף לטבלה עוד תלמיד שקיבל ציון 90 (שהשכיחות שלו תעלה). מה יקרה בגרף?",
+            opts: ["העמודה של 90 תגבה", "העמודה של 90 תנמיך", "תתווסף עמודה חדשה", "הגרף לא ישתנה"],
+            a: 0
+        },
+        {
+            t: "טבלה וגרף",
+            q: "האם ייתכן גרף עמודות שבו שתי עמודות הן באותו גובה בדיוק?",
+            opts: ["לא, זה לא הגיוני", "כן, אם לשני הערכים יש בדיוק אותה שכיחות", "רק אם אין נתונים בטבלה", "כן, אבל רק אם השכיחות היא 0"],
+            a: 1
+        },
+
+        // --- שאלת בונוס ---
+        {
+            t: "הבנה כללית",
+            q: "למה שכיחות מצטברת נקראת לפעמים 'כדור שלג'?",
+            opts: ["כי היא קרה מאוד", "כי היא גדלה ככל שמתקדמים בטבלה וצוברת את העבר", "כי היא עגולה כמו כדור", "כי היא נמסה בסוף"],
+            a: 1
+        }
+    ];
+
+    function renderQuiz() {
+        const area = document.getElementById('questions-area');
+        questions.forEach((item, index) => {
+            const card = document.createElement('div');
+            card.className = 'question-card';
+            
+            // Handle HTML content or text content
+            let content = item.html ? item.html : `<p>${item.q}</p>`;
+            
+            card.innerHTML = `
+                <div class="question-title">${index + 1}. ${item.t}</div>
+                <div>${content}</div>
+                <div class="options">
+                    ${item.opts.map((opt, i) => `
+                        <label class="option-label" onclick="selectOpt(this)">
+                            <input type="radio" name="q${index}" value="${i}">
+                            <span>${opt}</span>
+                        </label>
+                    `).join('')}
+                </div>
+            `;
+            area.appendChild(card);
+        });
+    }
+
+    function selectOpt(label) {
+        const parent = label.parentElement;
+        const labels = parent.getElementsByTagName('label');
+        for (let l of labels) l.classList.remove('selected');
+        label.classList.add('selected');
+    }
+
+    function submitQuiz() {
+        let score = 0;
+        let mistakes = [];
+        let answeredCount = 0;
+
+        document.getElementById('error-msg').style.display = 'none';
+
+        questions.forEach((item, index) => {
+            const selected = document.querySelector(`input[name="q${index}"]:checked`);
+            if (selected) {
+                answeredCount++;
+                const val = parseInt(selected.value);
+                if (val === item.a) {
+                    score += (100 / questions.length); 
+                } else {
+                    mistakes.push({
+                        q: item.q || "שאלה עם טבלה",
+                        topic: item.t,
+                        correct: item.opts[item.a],
+                        wrong: item.opts[val]
+                    });
+                }
+            }
+        });
+
+        if (answeredCount < questions.length) {
+            document.getElementById('error-msg').style.display = 'block';
+            return;
+        }
+
+        // Show Results
+        document.getElementById('quiz-form').style.display = 'none';
+        document.getElementById('results-container').style.display = 'block';
+        window.scrollTo(0,0);
+
+        const finalScore = Math.round(score);
+        const scoreEl = document.getElementById('final-score');
+        const circle = document.getElementById('score-circle');
+        scoreEl.innerText = finalScore;
+
+        if (finalScore >= 90) {
+            circle.style.backgroundColor = '#27ae60';
+            document.getElementById('result-message').innerText = "וואו! ציון מצוין! שולטת בחומר! 🏆";
+        } else if (finalScore >= 70) {
+            circle.style.backgroundColor = '#f39c12';
+            document.getElementById('result-message').innerText = "עבודה יפה! יש הבנה טובה, כדאי לעבור על הטעויות. 👍";
+        } else {
+            circle.style.backgroundColor = '#e74c3c';
+            document.getElementById('result-message').innerText = "כדאי לחזור שוב על הלומדה ולנסות שנית. 💪";
+        }
+
+        if (mistakes.length > 0) {
+            const mistakesContainer = document.getElementById('mistakes-container');
+            document.getElementById('feedback-list').style.display = 'block';
+            
+            mistakes.forEach(m => {
+                const div = document.createElement('div');
+                div.className = 'mistake-item';
+                div.innerHTML = `
+                    <div class="mistake-topic">${m.topic}</div>
+                    <div style="font-weight:bold; margin-bottom:5px;">${m.q}</div>
+                    <div style="color:red">התשובה שסימנת: ${m.wrong}</div>
+                    <div style="color:green">התשובה הנכונה: ${m.correct}</div>
+                `;
+                mistakesContainer.appendChild(div);
+            });
+        }
+
+        // Prepare Report
+        window.quizReport = `היי ענב, סיימתי את המבחן על טבלאות שכיחות!\n`;
+        window.quizReport += `הציון שלי: ${finalScore}\n`;
+        if (mistakes.length > 0) {
+            window.quizReport += `טעיתי ב-${mistakes.length} שאלות בנושאים:\n`;
+            const topics = [...new Set(mistakes.map(m => m.topic))];
+            window.quizReport += topics.join(", ") + "\n";
+        } else {
+            window.quizReport += "עניתי על הכל נכון! 😎";
+        }
+    }
+
+    function copyToClipboard() {
+        if (!window.quizReport) return;
+        navigator.clipboard.writeText(window.quizReport).then(() => {
+            alert("הדוח הועתק בהצלחה! עכשיו אפשר להדביק בוואטסאפ.");
+        }).catch(err => {
+            alert("שגיאה בהעתקה, נסי לצלם מסך.");
+        });
+    }
+
+    renderQuiz();
+
+// ===== שילוב פלטפורמת למידה – מודול 3 =====
+const _MOD_INDEX = 3;
+const _MOD_NAME = 'חידון: שכיחויות';
+
+document.addEventListener('DOMContentLoaded', function() {
+  initModule(_MOD_INDEX, _MOD_NAME, function(progress) {
+    saveProgress(_MOD_INDEX, 1);
+  });
+});
+
+(function() {
+  var _orig = submitQuiz;
+  submitQuiz = function() {
+    _orig();
+    markComplete(_MOD_INDEX);
+  };
+})();
+
+</script>
+
+</body>
+</html>
