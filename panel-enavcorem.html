@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>לוח מורה – סטטיסטיקה</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="js/supabase-config.js"></script>
+  <script src="js/progress.js"></script>
+  <style>
+    :root {
+      --primary: #6C63FF;
+      --success: #27ae60;
+      --warning: #f39c12;
+      --danger: #e74c3c;
+      --bg: #F3F4F6;
+      --card: #fff;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: var(--bg);
+      color: #333;
+      min-height: 100vh;
+      direction: rtl;
+    }
+
+    /* ===== מסך כניסה ===== */
+    #login-screen {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .login-box {
+      background: var(--card);
+      border-radius: 20px;
+      padding: 40px;
+      width: 100%;
+      max-width: 380px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+
+    .login-box .icon { font-size: 3rem; margin-bottom: 14px; }
+    .login-box h2 { color: var(--primary); margin-bottom: 6px; }
+    .login-box p { color: #999; font-size: 0.9rem; margin-bottom: 24px; }
+
+    .login-box input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 1rem;
+      text-align: center;
+      letter-spacing: 3px;
+      margin-bottom: 14px;
+      font-family: inherit;
+    }
+
+    .login-box input:focus { outline: none; border-color: var(--primary); }
+    .login-box .err { color: var(--danger); font-size: 0.85rem; margin-bottom: 10px; min-height: 18px; }
+
+    .btn-enter {
+      width: 100%;
+      padding: 12px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .btn-enter:hover { background: #5a52d5; }
+
+    /* ===== לוח המורה ===== */
+    #dashboard { display: none; }
+
+    .top-bar {
+      background: var(--card);
+      padding: 16px 30px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 2px solid #eee;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .top-bar h1 { font-size: 1.3rem; color: var(--primary); }
+    .top-bar span { font-size: 0.9rem; color: #888; }
+
+    .content { padding: 24px 30px; }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 18px 20px;
+      text-align: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+
+    .stat-card .num { font-size: 2rem; font-weight: bold; color: var(--primary); }
+    .stat-card .label { font-size: 0.8rem; color: #aaa; margin-top: 4px; }
+
+    /* ===== פילטרים ===== */
+    .filters {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .filters select, .filters input {
+      padding: 8px 12px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-family: inherit;
+      direction: rtl;
+    }
+
+    .filters select:focus, .filters input:focus { outline: none; border-color: var(--primary); }
+
+    .btn-refresh {
+      padding: 8px 16px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    /* ===== SQL banner ===== */
+    .sql-banner {
+      background: #fff8e1;
+      border: 2px solid #ffe082;
+      border-radius: 12px;
+      padding: 14px 18px;
+      margin-bottom: 18px;
+      font-size: 0.88rem;
+      color: #6d4c00;
+    }
+
+    .sql-banner strong { display: block; margin-bottom: 6px; font-size: 0.95rem; }
+    .sql-banner code {
+      display: block;
+      background: #fffde7;
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 0.78rem;
+      white-space: pre;
+      margin-top: 8px;
+      direction: ltr;
+      text-align: left;
+      overflow-x: auto;
+    }
+
+    /* ===== טבלת תלמידות ===== */
+    .table-wrap {
+      background: var(--card);
+      border-radius: 16px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    thead th {
+      background: #f8f8ff;
+      padding: 14px 10px;
+      text-align: right;
+      font-weight: 600;
+      color: #666;
+      border-bottom: 2px solid #eee;
+      white-space: nowrap;
+    }
+
+    tbody tr.student-row { border-bottom: 1px solid #f0f0f0; transition: background 0.15s; }
+    tbody tr.student-row:hover { background: #fafaf8; }
+
+    tbody tr.detail-row { background: #f5f5ff; }
+    tbody tr.detail-row td { padding: 0; }
+    .detail-inner {
+      padding: 20px 24px;
+      border-top: 2px dashed #e0e0f0;
+      border-bottom: 2px solid #e0e0f0;
+    }
+
+    td { padding: 12px 10px; vertical-align: middle; }
+
+    .td-name { font-weight: 600; }
+    .td-class { color: #888; font-size: 0.85rem; }
+    .td-seen { color: #aaa; font-size: 0.82rem; white-space: nowrap; }
+
+    /* פס התקדמות */
+    .prog-bar-wrap { width: 120px; }
+    .prog-label { font-size: 0.78rem; color: #888; margin-bottom: 4px; }
+    .prog-bar-outer { height: 8px; background: #eee; border-radius: 8px; overflow: hidden; }
+    .prog-bar-inner { height: 100%; background: linear-gradient(90deg, var(--primary), #2EC4B6); border-radius: 8px; }
+
+    /* נקודות מודול */
+    .dot-wrap { display: flex; gap: 3px; flex-wrap: nowrap; }
+
+    .dot {
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.72rem;
+      font-weight: bold;
+    }
+
+    .dot-done { background: #d4f5e5; color: var(--success); }
+    .dot-progress { background: #fff3cd; color: var(--warning); }
+    .dot-locked { background: #f0f0f0; color: #ccc; }
+
+    /* כפתורים */
+    .btn-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+    .btn-unlock {
+      padding: 5px 10px;
+      background: #fff;
+      border: 2px solid var(--primary);
+      border-radius: 7px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      color: var(--primary);
+      font-family: inherit;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .btn-unlock:hover { background: var(--primary); color: #fff; }
+    .btn-unlock:disabled { border-color: #ddd; color: #ccc; cursor: default; background: #f8f8f8; }
+
+    .btn-details {
+      padding: 5px 10px;
+      background: #fff;
+      border: 2px solid #9b59b6;
+      border-radius: 7px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      color: #9b59b6;
+      font-family: inherit;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .btn-details:hover { background: #9b59b6; color: #fff; }
+    .btn-details.open { background: #9b59b6; color: #fff; }
+
+    /* ===== פרטי חידון ===== */
+    .quiz-section { margin-bottom: 20px; }
+    .quiz-section-title {
+      font-weight: bold;
+      font-size: 1rem;
+      color: var(--primary);
+      margin-bottom: 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #e0e0f0;
+    }
+
+    .quiz-score-badge {
+      display: inline-block;
+      background: var(--primary);
+      color: #fff;
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 0.82rem;
+      margin-right: 8px;
+    }
+
+    .quiz-score-badge.good { background: var(--success); }
+    .quiz-score-badge.mid { background: var(--warning); }
+    .quiz-score-badge.low { background: var(--danger); }
+
+    .answers-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+      margin-top: 8px;
+    }
+
+    .answers-table th {
+      background: #f0f0f8;
+      padding: 6px 10px;
+      text-align: right;
+      font-weight: 600;
+      color: #666;
+    }
+
+    .answers-table td { padding: 6px 10px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+    .answers-table tr:last-child td { border-bottom: none; }
+    .answers-table tr.correct-row { background: #f5fdf8; }
+    .answers-table tr.wrong-row { background: #fff5f5; }
+
+    .no-quiz { color: #bbb; font-size: 0.88rem; font-style: italic; }
+
+    #loading-msg { text-align: center; padding: 40px; color: #aaa; }
+    #no-students { text-align: center; padding: 30px; color: #aaa; }
+
+    .legend {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 12px;
+      font-size: 0.82rem;
+      color: #888;
+      flex-wrap: wrap;
+    }
+
+    .legend span { display: flex; align-items: center; gap: 5px; }
+  </style>
+</head>
+<body>
+
+<!-- מסך כניסת מורה -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="icon">👩‍🏫</div>
+    <h2>לוח מורה</h2>
+    <p>הכניסי את סיסמת המורה</p>
+    <input type="password" id="teacher-pass" placeholder="סיסמה" onkeydown="if(event.key==='Enter')checkPass()">
+    <div class="err" id="pass-err"></div>
+    <button class="btn-enter" onclick="checkPass()">כניסה</button>
+  </div>
+</div>
+
+<!-- לוח המורה -->
+<div id="dashboard">
+  <div class="top-bar">
+    <h1>📊 לוח מורה – סטטיסטיקה</h1>
+    <span id="last-refresh"></span>
+  </div>
+
+  <div class="content">
+    <div class="stats-row" id="stats-row"></div>
+
+    <div id="sql-notice" class="sql-banner" style="display:none;">
+      <strong>⚠️ נדרשת פעולה חד-פעמית ב-Supabase כדי לראות תשובות חידונים:</strong>
+      כנסי ל-Supabase → SQL Editor → הדביקי ולחצי Run:
+      <code>CREATE TABLE IF NOT EXISTS quiz_answers (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  student_id UUID REFERENCES students(id) ON DELETE CASCADE,
+  module_index INT NOT NULL,
+  question_number INT NOT NULL,
+  question_text TEXT,
+  answer_given TEXT,
+  is_correct BOOLEAN,
+  answered_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(student_id, module_index, question_number)
+);
+ALTER TABLE quiz_answers ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "public_access_quiz_answers" ON quiz_answers
+  FOR ALL USING (true) WITH CHECK (true);</code>
+    </div>
+
+    <div class="filters">
+      <select id="filter-class" onchange="renderTable()">
+        <option value="">כל הכיתות</option>
+      </select>
+      <input type="text" id="filter-name" placeholder="חיפוש לפי שם..." oninput="renderTable()">
+      <button class="btn-refresh" onclick="loadData()">🔄 רענן</button>
+    </div>
+
+    <div class="legend">
+      <span><span class="dot dot-done">✓</span> הושלם</span>
+      <span><span class="dot dot-progress">▶</span> בתהליך</span>
+      <span><span class="dot dot-locked">—</span> נעול / לא התחיל</span>
+    </div>
+
+    <div class="table-wrap">
+      <div id="loading-msg">טוען נתונים... ⏳</div>
+      <div id="no-students" style="display:none;">אין תלמידות רשומות עדיין</div>
+      <table id="students-table" style="display:none;">
+        <thead id="table-head">
+          <tr></tr>
+        </thead>
+        <tbody id="students-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  const TEACHER_PASSWORD = 'ענב2025';
+
+  // חידונים עם תשובות שניתן לראות
+  const QUIZ_MODULES = [
+    { index: 3, title: 'חידון: שכיחויות' },
+    { index: 7, title: 'מבחן: שינוי בנתונים' }
+  ];
+
+  let allStudents = [];
+  let progressData = {};
+  let quizData = {};
+  let expandedStudentId = null;
+  let quizTableExists = true;
+
+  function checkPass() {
+    const pass = document.getElementById('teacher-pass').value;
+    if (pass === TEACHER_PASSWORD) {
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('dashboard').style.display = 'block';
+      loadData();
+    } else {
+      document.getElementById('pass-err').textContent = 'סיסמה שגויה';
+    }
+  }
+
+  async function loadData() {
+    document.getElementById('loading-msg').style.display = 'block';
+    document.getElementById('students-table').style.display = 'none';
+    document.getElementById('no-students').style.display = 'none';
+    expandedStudentId = null;
+
+    const { data: students } = await supabaseClient
+      .from('students')
+      .select('*')
+      .order('class_name')
+      .order('name');
+
+    const { data: progRows } = await supabaseClient
+      .from('module_progress')
+      .select('student_id, module_index, status, last_slide');
+
+    progressData = {};
+    (progRows || []).forEach(r => {
+      if (!progressData[r.student_id]) progressData[r.student_id] = {};
+      progressData[r.student_id][r.module_index] = r;
+    });
+
+    // Load quiz answers (graceful if table doesn't exist)
+    quizData = {};
+    try {
+      const { data: quizRows, error: quizErr } = await supabaseClient
+        .from('quiz_answers')
+        .select('student_id, module_index, question_number, question_text, answer_given, is_correct');
+
+      if (quizErr) {
+        quizTableExists = false;
+        document.getElementById('sql-notice').style.display = 'block';
+      } else {
+        quizTableExists = true;
+        document.getElementById('sql-notice').style.display = 'none';
+        (quizRows || []).forEach(r => {
+          if (!quizData[r.student_id]) quizData[r.student_id] = {};
+          if (!quizData[r.student_id][r.module_index]) quizData[r.student_id][r.module_index] = [];
+          quizData[r.student_id][r.module_index].push(r);
+        });
+      }
+    } catch(e) {
+      quizTableExists = false;
+      document.getElementById('sql-notice').style.display = 'block';
+    }
+
+    allStudents = students || [];
+
+    // Populate class filter
+    const classes = [...new Set(allStudents.map(s => s.class_name))].sort();
+    const filterEl = document.getElementById('filter-class');
+    filterEl.innerHTML = '<option value="">כל הכיתות</option>';
+    classes.forEach(c => {
+      const o = document.createElement('option');
+      o.value = c; o.textContent = c;
+      filterEl.appendChild(o);
+    });
+
+    updateStats();
+    buildTableHeader();
+    document.getElementById('last-refresh').textContent = 'עודכן: ' + new Date().toLocaleTimeString('he-IL');
+    renderTable();
+  }
+
+  function updateStats() {
+    const total = allStudents.length;
+    let activeToday = 0;
+    let completedAll = 0;
+    const today = new Date().toDateString();
+    const totalMods = MODULE_CONFIG.length;
+
+    allStudents.forEach(s => {
+      if (s.last_seen && new Date(s.last_seen).toDateString() === today) activeToday++;
+      const prog = progressData[s.id] || {};
+      const doneCount = Object.values(prog).filter(p => p.status === 'completed').length;
+      if (doneCount >= totalMods) completedAll++;
+    });
+
+    document.getElementById('stats-row').innerHTML =
+      '<div class="stat-card"><div class="num">' + total + '</div><div class="label">תלמידות רשומות</div></div>' +
+      '<div class="stat-card"><div class="num">' + activeToday + '</div><div class="label">פעילות היום</div></div>' +
+      '<div class="stat-card"><div class="num">' + completedAll + '</div><div class="label">השלימו הכל</div></div>' +
+      '<div class="stat-card"><div class="num">' + totalMods + '</div><div class="label">לומדות בסה"כ</div></div>';
+  }
+
+  function buildTableHeader() {
+    const thead = document.querySelector('#students-table thead tr');
+    thead.innerHTML =
+      '<th>שם</th><th>כיתה</th><th>התקדמות</th>' +
+      MODULE_CONFIG.map(m => '<th title="' + m.title + '" style="min-width:32px;text-align:center;">' + m.index + '</th>').join('') +
+      '<th>נראתה לאחרונה</th><th>פעולות</th>';
+  }
+
+  function renderTable() {
+    const filterClass = document.getElementById('filter-class').value;
+    const filterName = document.getElementById('filter-name').value.toLowerCase();
+    const totalMods = MODULE_CONFIG.length;
+
+    const rows = allStudents.filter(s => {
+      if (filterClass && s.class_name !== filterClass) return false;
+      if (filterName && !s.name.toLowerCase().includes(filterName)) return false;
+      return true;
+    });
+
+    const tbody = document.getElementById('students-tbody');
+    tbody.innerHTML = '';
+
+    if (allStudents.length === 0) {
+      document.getElementById('loading-msg').style.display = 'none';
+      document.getElementById('no-students').style.display = 'block';
+      return;
+    }
+
+    rows.forEach(s => {
+      const prog = progressData[s.id] || {};
+      const unlockedUpTo = s.unlocked_up_to || 1;
+      const completedCount = MODULE_CONFIG.filter(m => prog[m.index] && prog[m.index].status === 'completed').length;
+      const pct = Math.round((completedCount / totalMods) * 100);
+      const canUnlock = unlockedUpTo < MODULE_CONFIG[MODULE_CONFIG.length - 1].index;
+      const isExpanded = expandedStudentId === s.id;
+
+      const dotCells = MODULE_CONFIG.map(m => {
+        const p = prog[m.index];
+        const isCompleted = p && p.status === 'completed';
+        const isStarted = p && p.status === 'started';
+        let cls = 'dot-locked', symbol = '—', tip = 'לא התחיל';
+        if (isCompleted) { cls = 'dot-done'; symbol = '✓'; tip = 'הושלם'; }
+        else if (isStarted) { cls = 'dot-progress'; symbol = '▶'; tip = 'בתהליך'; }
+        return '<td style="text-align:center;"><div class="dot ' + cls + '" title="' + tip + '">' + symbol + '</div></td>';
+      }).join('');
+
+      const lastSeen = s.last_seen
+        ? new Date(s.last_seen).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+        : '—';
+
+      const studentRow = document.createElement('tr');
+      studentRow.className = 'student-row';
+      studentRow.id = 'row-' + s.id;
+      studentRow.innerHTML =
+        '<td class="td-name">' + s.name + '</td>' +
+        '<td class="td-class">' + s.class_name + '</td>' +
+        '<td><div class="prog-bar-wrap">' +
+          '<div class="prog-label">' + completedCount + '/' + totalMods + '</div>' +
+          '<div class="prog-bar-outer"><div class="prog-bar-inner" style="width:' + pct + '%"></div></div>' +
+        '</div></td>' +
+        dotCells +
+        '<td class="td-seen">' + lastSeen + '</td>' +
+        '<td><div class="btn-actions">' +
+          '<button class="btn-unlock" ' + (!canUnlock ? 'disabled' : '') +
+            ' onclick="unlockNext(\'' + s.id + '\',' + unlockedUpTo + ')">' +
+            (canUnlock ? '🔓 פתחי ' + (unlockedUpTo + 1) : '✅ הכל פתוח') + '</button>' +
+          '<button class="btn-details ' + (isExpanded ? 'open' : '') + '" id="btn-det-' + s.id + '"' +
+            ' onclick="toggleDetails(\'' + s.id + '\')">📋 פרטים</button>' +
+        '</div></td>';
+      tbody.appendChild(studentRow);
+
+      // שורת פרטים מתקפלת
+      const detailRow = document.createElement('tr');
+      detailRow.className = 'detail-row';
+      detailRow.id = 'detail-' + s.id;
+      detailRow.style.display = isExpanded ? 'table-row' : 'none';
+
+      const colCount = MODULE_CONFIG.length + 5;
+      const detailCell = document.createElement('td');
+      detailCell.colSpan = colCount;
+      detailCell.innerHTML = '<div class="detail-inner">' + buildDetailHTML(s) + '</div>';
+      detailRow.appendChild(detailCell);
+      tbody.appendChild(detailRow);
+    });
+
+    document.getElementById('loading-msg').style.display = 'none';
+    document.getElementById('students-table').style.display = 'table';
+  }
+
+  function buildDetailHTML(student) {
+    let html = '<div style="font-weight:bold;margin-bottom:14px;font-size:1rem;color:#6C63FF;">📊 ' + student.name + ' — פרטי תשובות</div>';
+
+    if (!quizTableExists) {
+      return html + '<div class="no-quiz">טבלת החידונים לא קיימת עדיין. ראי את ההוראות למעלה.</div>';
+    }
+
+    const studentQuiz = quizData[student.id] || {};
+    let hasAny = false;
+
+    QUIZ_MODULES.forEach(function(qm) {
+      const answers = studentQuiz[qm.index];
+      html += '<div class="quiz-section"><div class="quiz-section-title">' + qm.title + ' — ';
+
+      if (!answers || answers.length === 0) {
+        html += '<span style="color:#bbb;font-weight:normal;">לא הוגש</span></div></div>';
+        return;
+      }
+
+      hasAny = true;
+      const sorted = answers.slice().sort(function(a, b) { return a.question_number - b.question_number; });
+      const correctCount = sorted.filter(function(a) { return a.is_correct; }).length;
+      const total = sorted.length;
+      const score = Math.round((correctCount / total) * 100);
+      const badgeCls = score >= 90 ? 'good' : score >= 70 ? 'mid' : 'low';
+
+      html += '<span class="quiz-score-badge ' + badgeCls + '">' + score + ' (' + correctCount + '/' + total + ')</span></div>';
+      html += '<table class="answers-table"><thead><tr><th>#</th><th>שאלה</th><th>תשובה</th><th style="text-align:center;">תוצאה</th></tr></thead><tbody>';
+
+      sorted.forEach(function(a) {
+        const rowCls = a.is_correct ? 'correct-row' : 'wrong-row';
+        const icon = a.is_correct ? '✅' : '❌';
+        const qText = (a.question_text || '—').substring(0, 80);
+        html += '<tr class="' + rowCls + '">' +
+          '<td style="color:#999;">' + a.question_number + '</td>' +
+          '<td>' + qText + '</td>' +
+          '<td>' + (a.answer_given || '—') + '</td>' +
+          '<td style="text-align:center;">' + icon + '</td>' +
+          '</tr>';
+      });
+
+      html += '</tbody></table></div>';
+    });
+
+    if (!hasAny) {
+      html += '<div class="no-quiz">התלמידה לא הגישה אף חידון עדיין.</div>';
+    }
+
+    return html;
+  }
+
+  function toggleDetails(studentId) {
+    const detailRow = document.getElementById('detail-' + studentId);
+    const btn = document.getElementById('btn-det-' + studentId);
+    if (!detailRow) return;
+
+    if (expandedStudentId === studentId) {
+      detailRow.style.display = 'none';
+      btn.classList.remove('open');
+      expandedStudentId = null;
+    } else {
+      if (expandedStudentId) {
+        const prev = document.getElementById('detail-' + expandedStudentId);
+        const prevBtn = document.getElementById('btn-det-' + expandedStudentId);
+        if (prev) prev.style.display = 'none';
+        if (prevBtn) prevBtn.classList.remove('open');
+      }
+      detailRow.style.display = 'table-row';
+      btn.classList.add('open');
+      expandedStudentId = studentId;
+    }
+  }
+
+  async function unlockNext(studentId, currentUnlocked) {
+    const maxIndex = MODULE_CONFIG[MODULE_CONFIG.length - 1].index;
+    const newVal = Math.min(currentUnlocked + 1, maxIndex);
+    await supabaseClient.from('students').update({ unlocked_up_to: newVal }).eq('id', studentId);
+    const s = allStudents.find(x => x.id === studentId);
+    if (s) s.unlocked_up_to = newVal;
+    renderTable();
+    updateStats();
+  }
+</script>
+</body>
+</html>

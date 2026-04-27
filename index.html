@@ -225,10 +225,6 @@
     <label for="student-class">כיתה</label>
     <select id="student-class">
       <option value="">-- בחרי כיתה --</option>
-      <option>י' א</option>
-      <option>י' ב</option>
-      <option>י' ג</option>
-      <option>י' ד</option>
     </select>
   </div>
 
@@ -263,6 +259,22 @@
 </div>
 
 <script>
+  // ===== רשימת הכיתות — ערכי כאן כדי להוסיף/להסיר כיתות =====
+  const CLASSES = [
+    "י' א",
+    "י' ב",
+    "י' ג",
+    "י' ד",
+  ];
+
+  // בנה את הדרופדאון מהרשימה
+  const classSelect = document.getElementById('student-class');
+  CLASSES.forEach(c => {
+    const opt = document.createElement('option');
+    opt.textContent = c;
+    classSelect.appendChild(opt);
+  });
+
   // Enter key support
   document.getElementById('student-name').addEventListener('keydown', e => {
     if (e.key === 'Enter') doLogin();

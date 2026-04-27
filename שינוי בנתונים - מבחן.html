@@ -450,8 +450,21 @@ document.addEventListener('DOMContentLoaded', function() {
 (function() {
   var _orig = submitQuiz;
   submitQuiz = function() {
+    var answers = [];
+    questions.forEach(function(item, index) {
+      var sel = document.querySelector('input[name="q' + index + '"]:checked');
+      if (sel) answers.push({
+        question_number: index + 1,
+        question_text: item.q || ('שאלה ' + (index + 1)),
+        answer_given: item.opts[parseInt(sel.value)],
+        is_correct: parseInt(sel.value) === item.a
+      });
+    });
     _orig();
-    markComplete(_MOD_INDEX);
+    if (answers.length === questions.length) {
+      markComplete(_MOD_INDEX);
+      saveQuizAnswers(_MOD_INDEX, answers);
+    }
   };
 })();
 
