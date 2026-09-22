@@ -27,7 +27,6 @@ export const TEACHERS = [
   {
     id: 'enav',
     name: 'ענב',
-    // "ענב2025"
     passwordHash: '31fc3cb0c9bc23e6630e1b46cbf96e25f9265cb0ec4cc4c267284adbd8f66870',
     // 'all' = רואה את כל התלמידות בכל בתי הספר והכיתות.
     scope: 'all',
