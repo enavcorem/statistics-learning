@@ -18,8 +18,9 @@
     <div class="card login-card">
       <div class="icon">👩‍🏫</div>
       <h1>לוח מורה</h1>
-      <p class="muted">הכניסי את סיסמת המורה</p>
-      <input type="password" id="teacher-pass" class="input-field" placeholder="סיסמה" style="margin-bottom:var(--space-3);text-align:center;">
+      <p class="muted">שם המשתמש והסיסמה שקיבלת</p>
+      <input type="text" id="teacher-login" class="input-field ltr-field" placeholder="שם משתמש" autocomplete="username" style="margin-bottom:var(--space-3);text-align:center;">
+      <input type="password" autocomplete="current-password" id="teacher-pass" class="input-field" placeholder="סיסמה" style="margin-bottom:var(--space-3);text-align:center;">
       <button type="button" id="login-btn" class="btn btn-primary btn-block">כניסה</button>
       <div class="err" id="pass-err"></div>
     </div>
@@ -32,6 +33,9 @@
     </div>
 
     <div class="stats-grid" id="stats-grid"></div>
+
+    <div class="class-codes" id="class-codes"></div>
+    <div class="card form-panel" id="form-panel" style="display:none;"></div>
 
     <div class="filters-row">
       <select id="filter-class" class="input-field"></select>
@@ -57,6 +61,6 @@
     </div>
   </div>
 
-  <script type="module" src="/teacher/teacher-dashboard.js"></script>
+  <script type="module" src="teacher-dashboard.js"></script>
 </body>
 </html>

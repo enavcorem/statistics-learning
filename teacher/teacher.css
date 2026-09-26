@@ -136,3 +136,43 @@
 @media (max-width: 640px) {
   .teacher-container { padding: var(--space-4) var(--space-3) var(--space-7); }
 }
+
+/* ===== קודי הכיתות ===== */
+.class-codes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+.class-codes:empty { display: none; }
+.class-code-tile {
+  background: var(--card-bg);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.06));
+}
+.class-code-label { font-weight: 700; }
+.class-code-num { font-size: 1.6rem; font-weight: 800; letter-spacing: 0.15em; color: var(--color-primary); text-align: right; }
+.class-code-meta { font-size: 0.8rem; color: var(--text-muted); margin-bottom: var(--space-2); }
+
+.class-code-actions { display: flex; gap: var(--space-2); }
+.class-code-actions .btn { flex: 1; font-size: 0.85rem; padding: 6px 8px; }
+.class-code-add {
+  border: 2px dashed var(--border);
+  box-shadow: none;
+  background: transparent;
+  color: var(--color-primary);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  min-height: 120px;
+}
+.class-code-add:hover { border-color: var(--color-primary); }
+.form-panel { margin-bottom: var(--space-4); }
+.form-panel h2 { margin-top: 0; }
+.form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--space-3); }
+.form-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 0.88rem; color: var(--text-muted); }
+.form-actions { display: flex; gap: var(--space-2); align-items: center; margin-top: var(--space-3); grid-column: 1 / -1; }
+.form-panel .err { color: var(--danger); grid-column: 1 / -1; min-height: 1.2em; }
+.class-code-inline { font-size: 1.3rem; letter-spacing: 0.15em; color: var(--color-primary); }
+#nt-msg { direction: rtl; white-space: pre-wrap; font-family: var(--font-body); }

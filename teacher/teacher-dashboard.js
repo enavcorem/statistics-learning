@@ -11,9 +11,9 @@ import { CHAPTERS, COURSE, getFlatUnits, findChapter } from '../content/manifest
 import { supabaseClient } from '../js/supabase-config.js';
 import { XP_VALUES } from '../js/progress.js';
 
-// זיהוי המורה והכיתות שהיא רואה יושבים ב-teachers.js — ראו שם גם את
-// ההסבר מה השכבה הזו כן מבטיחה ומה לא, ואיך היא מוחלפת ב-Auth אמיתי.
-import { findTeacherByHash, canSeeStudent, sha256Hex } from './teachers.js';
+// המורות יושבות במסד (טבלת teachers, מיגרציה 02). הסיסמה נבדקת בשרת,
+// וכל מורה מקבלת רק את הכיתות שלה. בשיחה 2ג: כניסה עם גוגל, ו-RLS
+// שסוגר את טבלאות התלמידות.
 
 document.title = COURSE.teacherTitle;
 const titleEl = document.getElementById('teacher-title');
@@ -62,7 +62,8 @@ function unitTitle(unitId) {
 function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str == null ? '' : String(str);
-  return div.innerHTML;
+  // גם גרשיים — הפונקציה משמשת גם בתוך מאפיינים (value="..."), ו-תשפ"ז מכיל "
+  return div.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 function $(id) { return document.getElementById(id); }
@@ -71,27 +72,35 @@ let allStudents = [];
 let progressByStudent = {};
 let quizByStudent = {};
 let exemptionsByStudent = {};
+let allClasses = [];
+let classesByStudent = {};
 let expandedId = null;
-let currentTeacher = null;
+// { login, password, teacher: { id, name, is_admin, current_year } }.
+// בזיכרון בלבד: רענון הדף מחזיר למסך הכניסה.
+let session = null;
+
+// כל פעולה של מורה עוברת דרך פונקציה במסד שבודקת שם משתמש וסיסמה (מיגרציה 02)
+function teacherRpc(fn, args = {}) {
+  return supabaseClient.rpc(fn, { p_login: session.login, p_password: session.password, ...args });
+}
 
 async function tryLogin() {
-  const val = $('teacher-pass').value;
-  const hash = await sha256Hex(val);
-  const teacher = findTeacherByHash(hash);
-  if (teacher) {
-    currentTeacher = teacher;
-    $('login-screen').style.display = 'none';
-    $('dashboard').style.display = 'block';
-    const whoEl = $('teacher-who');
-    if (whoEl) {
-      whoEl.textContent = teacher.scope === 'all'
-        ? `${teacher.name} · כל הכיתות`
-        : `${teacher.name} · הכיתות שלי`;
-    }
-    loadData();
-  } else {
-    $('pass-err').textContent = 'סיסמה שגויה';
+  const login = $('teacher-login').value.trim();
+  const password = $('teacher-pass').value;
+  if (!login || !password) { $('pass-err').textContent = 'צריך שם משתמש וסיסמה'; return; }
+  $('pass-err').textContent = '';
+  const { data, error } = await supabaseClient.rpc('teacher_login', { p_login: login, p_password: password });
+  if (error) {
+    console.warn('teacher_login נכשל:', error);
+    $('pass-err').textContent = 'אין חיבור לשרת כרגע. כדאי לנסות שוב בעוד רגע';
+    return;
   }
+  if (!data) { $('pass-err').textContent = 'שם משתמש או סיסמה שגויים'; return; }
+  session = { login, password, teacher: data };
+  $('login-screen').style.display = 'none';
+  $('dashboard').style.display = 'block';
+  $('teacher-who').textContent = data.is_admin ? `${data.name} · מנהלת, כל הכיתות` : `${data.name} · הכיתות שלי`;
+  loadData();
 }
 
 async function loadData() {
@@ -100,17 +109,30 @@ async function loadData() {
   $('no-students').style.display = 'none';
   expandedId = null;
 
-  const [studentsRes, progressRes, quizRes, exemptionRes] = await Promise.all([
+  const [classesRes, enrollRes, studentsRes, progressRes, quizRes, exemptionRes] = await Promise.all([
+    teacherRpc('teacher_classes'),
+    supabaseClient.from('enrollments').select('*'),
     supabaseClient.from('students').select('*').order('class_name').order('name'),
     supabaseClient.from('unit_progress').select('*'),
     supabaseClient.from('quiz_answers').select('*'),
     supabaseClient.from('exemption_attempts').select('*'),
   ]);
 
-  // כאן, ורק כאן, מצטמצמת הרשימה לכיתות של המורה המחוברת. כשיהיה Auth
-  // אמיתי, Supabase כבר יחזיר רק אותן ו-canSeeStudent תחזיר תמיד true —
-  // השורה הזו תישאר נכונה בלי שינוי.
-  allStudents = (studentsRes.data || []).filter((s) => canSeeStudent(currentTeacher, s));
+  // הסינון כאן הוא עניין של סדר ולא של אבטחה: הכיתות מגיעות מהמסד לפי
+  // המורה, אבל טבלאות התלמידות עדיין פתוחות ל-anon עד שיחה 2ג.
+  allClasses = classesRes.data || [];
+  const classById = Object.fromEntries(allClasses.map((c) => [c.id, c]));
+  classesByStudent = {};
+  (enrollRes.data || []).forEach((e) => {
+    const cls = classById[e.class_id];
+    if (!cls) return;
+    (classesByStudent[e.student_id] = classesByStudent[e.student_id] || []).push(cls);
+  });
+  // הכיתה הפעילה קודם, ואחריה הארכיון מהחדש לישן
+  Object.values(classesByStudent).forEach((list) => list.sort((a, b) => (a.archived - b.archived) || b.school_year.localeCompare(a.school_year)));
+
+  // מנהלת רואה את כולן, כולל מי שנכנסה בטופס הישן ואין לה כיתה. מורה — רק את הכיתות שלה.
+  allStudents = (studentsRes.data || []).filter((s) => session.teacher.is_admin || classesByStudent[s.id]);
 
   progressByStudent = {};
   (progressRes.data || []).forEach((r) => {
@@ -133,6 +155,7 @@ async function loadData() {
   });
 
   populateClassFilter();
+  renderClassCodes();
   buildTableHeader();
   renderStats();
   renderTable();
@@ -140,11 +163,178 @@ async function loadData() {
 }
 
 function populateClassFilter() {
-  const classes = [...new Set(allStudents.map((s) => s.class_name))].sort();
   const sel = $('filter-class');
   const current = sel.value;
-  sel.innerHTML = '<option value="">כל הכיתות</option>' + classes.map((c) => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
-  sel.value = classes.includes(current) ? current : '';
+  const years = [...new Set(allClasses.map((c) => c.school_year))];
+  let html = '<option value="">כל הכיתות</option>';
+  years.forEach((y) => {
+    html += `<optgroup label="${escapeHtml(y)}"><option value="year:${escapeHtml(y)}">כל ${escapeHtml(y)}</option>`;
+    allClasses.filter((c) => c.school_year === y).forEach((c) => {
+      html += `<option value="${c.id}">${escapeHtml(c.label)}${c.archived ? ' (ארכיון)' : ''}</option>`;
+    });
+    html += '</optgroup>';
+  });
+  if (allStudents.some((s) => !classesByStudent[s.id])) html += '<option value="none">בלי כיתה (הטופס הישן)</option>';
+  sel.innerHTML = html;
+  sel.value = [...sel.options].some((o) => o.value === current) ? current : '';
+}
+
+function matchesClassFilter(student, filter) {
+  if (!filter) return true;
+  const list = classesByStudent[student.id] || [];
+  if (filter === 'none') return list.length === 0;
+  if (filter.startsWith('year:')) return list.some((c) => c.school_year === filter.slice(5));
+  return list.some((c) => c.id === filter);
+}
+
+// ===== הכיתות: קוד, קישור, ארכיון, כיתה חדשה (ולמנהלת: מורה חדשה) =====
+
+function renderClassCodes() {
+  const box = $('class-codes');
+  const active = allClasses.filter((c) => !c.archived);
+  const showTeacher = session.teacher.is_admin;
+  box.innerHTML = active.map((c) => `
+    <div class="class-code-tile">
+      <div class="class-code-label">${escapeHtml(c.label)} · ${escapeHtml(c.school_year)}</div>
+      ${showTeacher && c.teacher_name ? `<div class="class-code-meta">${escapeHtml(c.teacher_name)}</div>` : ''}
+      <div class="class-code-num" dir="ltr">${escapeHtml(c.join_code)}</div>
+      <div class="class-code-meta">${c.student_count} רשומות</div>
+      <div class="class-code-actions">
+        <button type="button" class="btn btn-ghost class-code-copy" data-code="${escapeHtml(c.join_code)}">📋 העתקת קישור</button>
+        <button type="button" class="btn btn-ghost class-code-archive" data-id="${c.id}" title="הקוד יפסיק לעבוד. ההתקדמות של התלמידות נשמרת">🗄️ לארכיון</button>
+      </div>
+    </div>`).join('') + `
+    <button type="button" class="class-code-tile class-code-add" id="add-class-btn">➕ כיתה חדשה</button>
+    ${showTeacher ? '<button type="button" class="class-code-tile class-code-add" id="add-teacher-btn">👩‍🏫 מורה חדשה</button>' : ''}`;
+
+  box.querySelectorAll('.class-code-copy').forEach((btn) => btn.addEventListener('click', async () => {
+    const link = new URL('../?code=' + btn.dataset.code, location.href).href;
+    try {
+      await navigator.clipboard.writeText(link);
+      btn.textContent = '✅ הועתק';
+    } catch (e) {
+      window.prompt('הקישור לכיתה:', link);
+    }
+  }));
+  box.querySelectorAll('.class-code-archive').forEach((btn) => btn.addEventListener('click', async () => {
+    const cls = allClasses.find((c) => c.id === btn.dataset.id);
+    if (!window.confirm(`להעביר את "${cls.label}" לארכיון?\nהקוד יפסיק לעבוד. ההתקדמות של התלמידות נשמרת, והכיתה תופיע בסינון עם (ארכיון).`)) return;
+    const { data } = await teacherRpc('teacher_set_archived', { p_class_id: cls.id, p_archived: true });
+    if (data) loadData(); else window.alert('לא הצלחנו להעביר לארכיון. כדאי לרענן ולנסות שוב');
+  }));
+  $('add-class-btn').addEventListener('click', showNewClassForm);
+  if (showTeacher) $('add-teacher-btn').addEventListener('click', showNewTeacherForm);
+}
+
+function closeFormPanel() {
+  $('form-panel').style.display = 'none';
+  $('form-panel').innerHTML = '';
+}
+
+function showNewClassForm() {
+  const panel = $('form-panel');
+  panel.style.display = 'block';
+  panel.innerHTML = `
+    <h2>כיתה חדשה</h2>
+    <form id="new-class-form" class="form-grid" novalidate>
+      <label>שם הכיתה, כמו שהתלמידות יראו אותו
+        <input class="input-field" id="nc-label" maxlength="60" placeholder="לדוגמה: אורט י״א 3" required>
+      </label>
+      <label>בית ספר
+        <input class="input-field" id="nc-school" maxlength="60" placeholder="לדוגמה: אורט">
+      </label>
+      <label>שכבה
+        <input class="input-field" id="nc-grade" maxlength="20" list="nc-grades" placeholder="י״א">
+        <datalist id="nc-grades"><option value="י׳"></option><option value="י״א"></option><option value="י״ב"></option></datalist>
+      </label>
+      <label>שנת לימודים
+        <input class="input-field" id="nc-year" maxlength="10" value="${escapeHtml(session.teacher.current_year)}">
+      </label>
+      <label>לשון פנייה ברירת מחדל
+        <select class="input-field" id="nc-gender"><option value="f">נקבה</option><option value="m">זכר</option></select>
+      </label>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">יצירת כיתה</button>
+        <button type="button" class="btn btn-ghost" id="nc-cancel">ביטול</button>
+      </div>
+      <div class="err" id="nc-err"></div>
+    </form>`;
+  $('nc-cancel').addEventListener('click', closeFormPanel);
+  $('nc-label').focus();
+  $('new-class-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const { data, error } = await teacherRpc('teacher_create_class', {
+      p_label: $('nc-label').value, p_school: $('nc-school').value, p_grade: $('nc-grade').value,
+      p_year: $('nc-year').value, p_default_gender: $('nc-gender').value,
+    });
+    if (error || !data) { $('nc-err').textContent = 'אין חיבור לשרת כרגע'; return; }
+    if (data.status === 'bad_label') { $('nc-err').textContent = 'צריך שם לכיתה'; return; }
+    if (data.status !== 'ok') { $('nc-err').textContent = 'הכניסה פגה. כדאי לרענן את הדף ולהיכנס שוב'; return; }
+    panel.innerHTML = `<h2>✅ הכיתה נפתחה</h2>
+      <p><strong>${escapeHtml(data.class.label)}</strong> · הקוד: <strong dir="ltr" class="class-code-inline">${escapeHtml(data.class.join_code)}</strong></p>
+      <p class="muted">הקוד עובד בכל הלומדות. "העתקת קישור" בכרטיס של הכיתה נותן קישור שהקוד כבר בתוכו.</p>
+      <button type="button" class="btn btn-ghost" id="nc-close">סגירה</button>`;
+    $('nc-close').addEventListener('click', closeFormPanel);
+    loadData();
+  });
+}
+
+// סיסמה התחלתית למורה חדשה: בלי תווים שמתבלבלים (0/O, 1/l)
+function suggestPassword() {
+  const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
+  const bytes = crypto.getRandomValues(new Uint8Array(8));
+  return [...bytes].map((b) => chars[b % chars.length]).join('');
+}
+
+function showNewTeacherForm() {
+  const panel = $('form-panel');
+  panel.style.display = 'block';
+  panel.innerHTML = `
+    <h2>מורה חדשה</h2>
+    <p class="muted">היא תקבל אוטומטית "כיתת בדיקה" משלה, ותוכל לפתוח כיתות בעצמה.</p>
+    <form id="new-teacher-form" class="form-grid" novalidate>
+      <label>שם (מופיע בלוח)
+        <input class="input-field" id="nt-name" maxlength="40" placeholder="לדוגמה: רחל" required>
+      </label>
+      <label>שם משתמש (אותיות באנגלית)
+        <input class="input-field ltr-field" id="nt-login" maxlength="30" placeholder="rachel" autocomplete="off" required>
+      </label>
+      <label>סיסמה התחלתית
+        <input class="input-field ltr-field" id="nt-pass" maxlength="40" value="${suggestPassword()}" autocomplete="off">
+      </label>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">יצירת מורה</button>
+        <button type="button" class="btn btn-ghost" id="nt-cancel">ביטול</button>
+      </div>
+      <div class="err" id="nt-err"></div>
+    </form>`;
+  $('nt-cancel').addEventListener('click', closeFormPanel);
+  $('nt-name').focus();
+  $('new-teacher-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = $('nt-name').value.trim();
+    const login = $('nt-login').value.trim().toLowerCase();
+    const pass = $('nt-pass').value;
+    const { data, error } = await teacherRpc('admin_create_teacher', { p_new_login: login, p_new_name: name, p_new_password: pass });
+    if (error || !data) { $('nt-err').textContent = 'אין חיבור לשרת כרגע'; return; }
+    const msg = { bad_input: 'צריך שם, שם משתמש, וסיסמה של 6 תווים לפחות', login_taken: 'שם המשתמש הזה כבר תפוס', auth: 'רק מנהלת יכולה ליצור מורות' }[data.status];
+    if (msg) { $('nt-err').textContent = msg; return; }
+    const dashLink = location.href.split('?')[0].split('#')[0];
+    const text = `שלום ${name}, הנה הכניסה ללוח המורה:\n${dashLink}\nשם משתמש: ${login}\nסיסמה: ${pass}\n\nמחכה לך שם "כיתת בדיקה" עם הקוד ${data.test_code}. אפשר להיכנס ללומדה עם הקוד, כמו תלמידה, ולראות איך זה נראה בלוח.`;
+    panel.innerHTML = `<h2>✅ ${escapeHtml(name)} נוספה</h2>
+      <p class="muted">הודעה מוכנה לשליחה (הסיסמה לא נשמרת בשום מקום אחר — כדאי להעתיק עכשיו):</p>
+      <textarea class="input-field" id="nt-msg" rows="7" readonly>${escapeHtml(text)}</textarea>
+      <div class="form-actions">
+        <button type="button" class="btn btn-primary" id="nt-copy">📋 העתקה</button>
+        <button type="button" class="btn btn-ghost" id="nt-close">סגירה</button>
+      </div>`;
+    $('nt-copy').addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(text); $('nt-copy').textContent = '✅ הועתק'; }
+      catch (err) { $('nt-msg').select(); }
+    });
+    $('nt-close').addEventListener('click', closeFormPanel);
+    loadData();
+  });
 }
 
 function buildTableHeader() {
@@ -190,7 +380,7 @@ function renderTable() {
   }
 
   const rows = allStudents.filter((s) => {
-    if (filterClass && s.class_name !== filterClass) return false;
+    if (!matchesClassFilter(s, filterClass)) return false;
     if (filterName && !s.name.toLowerCase().includes(filterName)) return false;
     return true;
   });
@@ -221,7 +411,7 @@ function renderTable() {
     tr.innerHTML = `
       <td class="td-name">${escapeHtml(s.name)}</td>
       <td class="td-sub">${escapeHtml(s.school)}</td>
-      <td class="td-sub">${escapeHtml(s.class_name)}</td>
+      <td class="td-sub">${escapeHtml(classesByStudent[s.id] ? classesByStudent[s.id][0].label : s.class_name)}</td>
       <td>
         <div class="completion-bar-wrap">
           <div class="completion-bar-outer"><div class="completion-bar-inner" style="width:${pct}%"></div></div>
@@ -302,6 +492,7 @@ function buildDetailHTML(student) {
 
 $('login-btn').addEventListener('click', tryLogin);
 $('teacher-pass').addEventListener('keydown', (e) => { if (e.key === 'Enter') tryLogin(); });
+$('teacher-login').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('teacher-pass').focus(); });
 $('refresh-btn').addEventListener('click', loadData);
 $('filter-class').addEventListener('change', renderTable);
 $('filter-name').addEventListener('input', renderTable);

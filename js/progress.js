@@ -3,7 +3,7 @@
 // שכבת אחסון: localStorage הוא תמיד "מטמון מקומי מיידי" — כל קריאה
 // (getStudent, canAccessUnit, computeXP וכו') ממשיכה להיות סינכרונית,
 // כדי ש-unit-runner.js/quiz-runner.js/roadmap-render.js לא יצטרכו להשתנות
-// בכלל. Supabase הוא "מקור אמת חוצה-מכשירים": בכל כניסה (loginStudent)
+// בכלל. Supabase הוא "מקור אמת חוצה-מכשירים": בכל כניסה (loginWithClassCode)
 // שולפים ממנו את הנתונים העדכניים ומעדכנים את המטמון המקומי לפיהם, ובכל
 // שינוי (saveProgress/markComplete/saveQuizAnswers/saveExemptionAttempt)
 // כותבים קודם למטמון המקומי (מיידי, לא תלוי רשת) ובמקביל שולחים עדכון
@@ -14,12 +14,15 @@
 // מ-content/manifest.js — זה מתקן מבנית את הבאג שבו יחידות "נשכחו" מרשימה
 // שנייה שלא עודכנה (מה שקרה באפליקציה הישנה ליחידות המבוא והמבחן הסופי).
 //
-// מחשבים משותפים (בית ספר): כל התלמידות שמורות באותו localStorage, אבל
-// בתוך "תיקיות" נפרדות לפי בית ספר+שם+כיתה. כשמישהי מתחברת בשם שכבר קיים
-// על המכשיר הזה, היא חוזרת בדיוק לנקודה שבה עצרה — גם אם מישהי אחרת
-// התחברה בינתיים על אותו מחשב. עכשיו, בזכות Supabase, זה גם עובד בין
-// מחשבים שונים: ברגע שממלאים את טופס הכניסה, שולפים את הנתונים העדכניים
-// ביותר מהשרת (לא רק מהמכשיר הזה).
+// כניסה עם קוד כיתה (loginWithClassCode): הקוד מזהה את הכיתה, והתלמידה
+// בוחרת את השם שלה מרשימה, או "אני חדשה". בית הספר והכיתה נגזרים מהקוד,
+// ולכן אין טעויות כתיב. הזהות היא ה-id של התלמידה, והכיתה היא רק שיוך
+// (טבלת enrollments), כך שמעבר שנה לא מאפס התקדמות.
+//
+// מחשבים משותפים: כל התלמידות שמורות באותו localStorage, בתוך "תיקיות"
+// נפרדות. תיקיות מהטופס הישן (מפתח בית ספר__שם__כיתה) נשארות כמו שהן —
+// מי שכבר מחוברת במכשיר נכנסת אוטומטית, בלי קוד. תיקייה חדשה מקבלת מפתח
+// לפי ה-id, ובכניסה מחפשים קודם תיקייה קיימת עם אותו id.
 
 import { COURSE, COURSE_ID, getFlatUnits, findUnit, findChapter } from '../content/manifest.js';
 import { supabaseClient } from './supabase-config.js';
@@ -92,11 +95,11 @@ function writeJSON(key, value) {
   catch (e) { console.warn('localStorage write failed for', key, e); }
 }
 
-function normPart(s) {
-  return String(s || '').trim().replace(/\s+/g, ' ').toLowerCase();
-}
-function makeStudentKey(school, name, className) {
-  return `${normPart(school)}__${normPart(name)}__${normPart(className)}`;
+// מפתח התיקייה של תלמידה: תיקייה קיימת עם אותו id (גם מהטופס הישן), או חדשה
+function bucketKeyForStudentId(studentId) {
+  const all = getAllBuckets();
+  const existing = Object.keys(all).find((k) => all[k] && all[k].student && all[k].student.id === studentId);
+  return existing || `id__${studentId}`;
 }
 
 function getAllBuckets() {
@@ -161,39 +164,16 @@ async function supabaseInsertExemptionAttempt(studentId, chapterId, score, passe
   }));
 }
 
-// יצירת תלמידה חדשה ב-Supabase. insert רגיל (לא upsert) בכוונה: אם זה
-// נכשל בגלל שהתלמידה כבר קיימת בפועל בשרת (מרוץ נדיר בין שני מחשבים),
-// לא רוצים "לגנוב" את השורה הקיימת שלה — פשוט מוותרים על הדחיפה הזו,
-// והכניסה הבאה שלה תשלוף אותה נכון דרך tryFetchRemoteBundle.
-function createRemoteStudent(student) {
+// התלמידה עצמה נוצרת רק בשרת (join_class), ולכן כאן יש רק עדכון
+function updateRemoteStudent(studentId, fields) {
   fireAndForget((async () => {
-    await throwOnError(await supabaseClient.from('students').insert({
-      id: student.id,
-      school: student.school,
-      name: student.name,
-      class_name: student.class_name,
-      school_norm: normPart(student.school),
-      name_norm: normPart(student.name),
-      class_norm: normPart(student.class_name),
-      gender: student.gender,
-      created_at: student.created_at,
-      last_seen: student.last_seen,
-    }));
+    await throwOnError(await supabaseClient.from('students').update(fields).eq('id', studentId));
   })());
 }
 
-function touchRemoteLastSeen(studentId) {
-  fireAndForget((async () => {
-    await throwOnError(await supabaseClient.from('students')
-      .update({ last_seen: new Date().toISOString() })
-      .eq('id', studentId));
-  })());
-}
-
-// דוחפים בקאלנד לשרת bucket שקיים רק מקומית (למשל נוצר כשהמכשיר היה
-// לא מקוון). ניסיון-אחד-כל-שדה, לא מחכה לתוצאה.
+// דוחפים לשרת התקדמות שנשמרה רק מקומית (למשל כשהמכשיר היה לא מקוון).
+// ניסיון-אחד-כל-שדה, לא מחכה לתוצאה.
 function pushLocalBucketToRemote(bucket) {
-  createRemoteStudent(bucket.student);
   Object.entries(bucket.progress).forEach(([unitId, p]) => {
     fireAndForget(supabaseUpsertUnitProgress(bucket.student.id, unitId, p));
   });
@@ -205,17 +185,15 @@ function pushLocalBucketToRemote(bucket) {
   });
 }
 
-// שולפים מ-Supabase bucket מלא (תלמידה + כל ההתקדמות שלה) לפי בית
-// ספר+שם+כיתה מנורמלים. מחזירים null אם לא נמצאה, או אם הייתה שגיאת
-// רשת/שרת — במקרה הזה ממשיכים בזרימה המקומית הרגילה, לא חוסמים כניסה.
-async function tryFetchRemoteBundle(schoolNorm, nameNorm, classNorm) {
+// שולפים מ-Supabase bucket מלא (תלמידה + כל ההתקדמות שלה) לפי ה-id.
+// מחזירים null אם לא נמצאה, או אם הייתה שגיאת רשת/שרת — במקרה הזה
+// ממשיכים עם התיקייה המקומית, אם יש.
+async function tryFetchRemoteBundle(studentId) {
   try {
     const { data: studentRow, error: studentErr } = await supabaseClient
       .from('students')
       .select('*')
-      .eq('school_norm', schoolNorm)
-      .eq('name_norm', nameNorm)
-      .eq('class_norm', classNorm)
+      .eq('id', studentId)
       .maybeSingle();
     if (studentErr) throw studentErr;
     if (!studentRow) return null;
@@ -268,49 +246,85 @@ export function logout() {
   location.reload();
 }
 
-export async function loginStudent(name, school, className, gender) {
-  const schoolNorm = normPart(school);
-  const nameNorm = normPart(name);
-  const classNorm = normPart(className);
-  const key = makeStudentKey(school, name, className);
-  const all = getAllBuckets();
-  const localBucket = all[key];
+// ===== כניסה עם קוד כיתה =====
 
-  const remote = await tryFetchRemoteBundle(schoolNorm, nameNorm, classNorm);
+// הקוד האחרון נשמר בלי קידומת קורס: שתי לומדות על אותו דומיין חולקות אותו,
+// ובמחשב כיתתי התלמידה הבאה רק בוחרת את השם שלה.
+const KEY_LAST_CLASS_CODE = 'lomda_last_class_code';
+
+export function normalizeClassCode(code) {
+  return String(code || '').replace(/\D/g, '');
+}
+
+// קוד מהקישור (?code=123456) קודם, ואחריו הקוד האחרון שנכנסו איתו במכשיר
+export function getSuggestedClassCode() {
+  try {
+    const fromUrl = normalizeClassCode(new URLSearchParams(location.search).get('code'));
+    if (fromUrl) return fromUrl;
+    return localStorage.getItem(KEY_LAST_CLASS_CODE) || '';
+  } catch (e) { return ''; }
+}
+
+// { ok: true, cls, students } או { ok: false, reason: 'bad_code' | 'network' }
+export async function fetchClassRoster(code) {
+  const normCode = normalizeClassCode(code);
+  if (normCode.length !== 6) return { ok: false, reason: 'bad_code' };
+  const { data, error } = await supabaseClient.rpc('class_roster', { p_code: normCode });
+  if (error) {
+    console.warn('class_roster נכשל:', error);
+    return { ok: false, reason: 'network' };
+  }
+  if (!data) return { ok: false, reason: 'bad_code' };
+  return { ok: true, cls: data.class, students: data.students };
+}
+
+// pick: { studentId } לתלמידה מהרשימה, או { newName } ל"אני חדשה".
+// מחזירה { ok: true, student } או { ok: false, reason }:
+// bad_code / bad_name / name_taken / network
+export async function loginWithClassCode(code, pick, gender) {
+  const normCode = normalizeClassCode(code);
+  const g = gender === 'm' ? 'm' : 'f';
+  let studentId = pick.studentId;
+
+  if (!studentId) {
+    const { data, error } = await supabaseClient.rpc('join_class', { p_code: normCode, p_name: pick.newName, p_gender: g });
+    if (error) {
+      console.warn('join_class נכשל:', error);
+      return { ok: false, reason: 'network' };
+    }
+    if (data.status !== 'ok') return { ok: false, reason: data.status };
+    studentId = data.student_id;
+  }
+
+  const key = bucketKeyForStudentId(studentId);
+  const localBucket = getAllBuckets()[key];
+  const remote = await tryFetchRemoteBundle(studentId);
 
   let bucket;
   if (remote) {
     // Supabase הוא מקור האמת חוצה-המכשירים — מעדכנים את המטמון המקומי
     // לפיו, כדי שתלמידה שמתחברת ממחשב אחר תמשיך בדיוק מאיפה שעצרה.
-    remote.student.last_seen = new Date().toISOString();
     bucket = remote;
-    saveBucket(key, bucket);
-    touchRemoteLastSeen(bucket.student.id);
   } else if (localBucket) {
-    // קיימת מקומית אבל לא נמצאה בשרת — כנראה נוצרה כשהיה ניתוק, או
-    // שהשרת לא זמין כרגע. ממשיכים עם הנתונים המקומיים, ומנסים לדחוף
-    // אותם לשרת ברקע כדי שהם יתעדכנו בפעם שכן תהיה רשת.
-    localBucket.student.last_seen = new Date().toISOString();
+    // השרת לא ענה, אבל יש תיקייה במכשיר הזה — ממשיכים איתה ומנסים
+    // לדחוף אותה ברקע.
     bucket = localBucket;
-    saveBucket(key, bucket);
     pushLocalBucketToRemote(bucket);
   } else {
-    const student = {
-      id: crypto.randomUUID(),
-      name: name.trim(),
-      school: school.trim(),
-      class_name: className.trim(),
-      gender: gender === 'm' ? 'm' : 'f',
-      created_at: new Date().toISOString(),
-      last_seen: new Date().toISOString(),
-    };
-    bucket = { student, progress: {}, quizAnswers: {}, exemptionAttempts: [] };
-    saveBucket(key, bucket);
-    createRemoteStudent(student);
+    return { ok: false, reason: 'network' };
   }
 
+  const now = new Date().toISOString();
+  const changed = { last_seen: now };
+  if (bucket.student.gender !== g) changed.gender = g;
+  bucket.student.last_seen = now;
+  bucket.student.gender = g;
+  updateRemoteStudent(studentId, changed);
+
+  saveBucket(key, bucket);
   writeJSON(KEY_CURRENT, key);
-  return bucket.student;
+  try { localStorage.setItem(KEY_LAST_CLASS_CODE, normCode); } catch (e) { /* לא קריטי */ }
+  return { ok: true, student: bucket.student };
 }
 
 // ===== התקדמות ליחידה =====
