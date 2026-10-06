@@ -109,6 +109,22 @@ for (const unit of manifest.getFlatUnits()) {
   }
 }
 
+// קידומת: כל הלומדות כותבות לאותו מסד, וההתקדמות וניסיונות הפטור נשמרים
+// רק לפי מזהה היחידה/הפרק. שתי לומדות עם אותו מזהה (למשל 'ch1') מתערבבות
+// בלוח המורה, ופטור בלומדה אחת עלול להיחשב בשנייה. לכן כל מזהה מתחיל
+// בקידומת אחת של הלומדה ('xl-ch1', 'client-ch1-u2').
+// סטטיסטיקה פטורה: היא הראשונה, ויש לה נתונים אמיתיים במזהים בלי קידומת.
+if (manifest.COURSE_ID !== 'stat') {
+  const ids = [...manifest.CHAPTERS.map((ch) => ch.id), ...manifest.getFlatUnits().map((u) => u.id)];
+  const prefix = String(ids[0] || '').split('-')[0];
+  if (!prefix || /^ch\d*$/.test(prefix)) {
+    problems.push(`מזהה "${ids[0]}" בלי קידומת של הלומדה. צריך למשל "${manifest.COURSE_ID}-ch1"`);
+  } else {
+    ids.filter((id) => !id.startsWith(prefix + '-'))
+      .forEach((id) => problems.push(`מזהה "${id}" לא מתחיל בקידומת "${prefix}-" כמו שאר הלומדה`));
+  }
+}
+
 const units = manifest.getFlatUnits();
 console.log(`קורס: ${manifest.COURSE?.title || manifest.COURSE_ID || '(ללא שם)'}`);
 console.log(`נבדקו ${units.length} יחידות · ${slides} סליידים · ${questions} שאלות`);

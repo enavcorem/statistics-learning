@@ -35,6 +35,9 @@ const LOGIN_MSG = {
   name_taken: (g) => (g === 'm' ? 'השם הזה כבר ברשימה — בחר אותו למעלה.' : 'השם הזה כבר ברשימה — בחרי אותו למעלה.'),
   bad_name: () => 'צריך לכתוב שם מלא.',
   no_pick: (g) => (g === 'm' ? 'בחר את השם שלך מהרשימה.' : 'בחרי את השם שלך מהרשימה.'),
+  bad_username: () => 'לא מצאנו את שם המשתמש הזה בכיתה. כדאי לבדוק מול הפתק מהמורה.',
+  no_username: (g) => (g === 'm' ? 'הקלד את שם המשתמש שקיבלת מהמורה.' : 'הקלידי את שם המשתמש שקיבלת מהמורה.'),
+  locked: () => 'בכיתה הזו נכנסים עם שם משתמש מהמורה.',
 };
 
 export function renderLogin(container) {
@@ -81,8 +84,48 @@ export function renderLogin(container) {
   async function tryCode(code, btn) {
     if (btn) { btn.disabled = true; btn.textContent = 'רגע…'; }
     const res = await Progress.fetchClassRoster(code);
-    if (res.ok) showPickStep(code, res.cls, res.students);
+    if (res.ok && res.cls.login_mode === 'username') showUsernameStep(code, res.cls);
+    else if (res.ok) showPickStep(code, res.cls, res.students);
     else showCodeStep(code, LOGIN_MSG[res.reason]());
+  }
+
+  // כיתה שבה המורה נותנת שמות משתמש: שדה אחד, בלי רשימה ובלי "אני חדשה".
+  // לשון הפנייה נלקחת מהכיתה עכשיו, ומהתלמיד עצמו אחרי הכניסה.
+  function showUsernameStep(code, cls) {
+    const gender = cls.default_gender === 'm' ? 'm' : 'f';
+    setTitle(gender);
+    stepEl.innerHTML = `
+      <div class="class-chip">
+        <span>🏫 ${escapeHtml(cls.label)} · ${escapeHtml(cls.school_year)}</span>
+        <button type="button" class="link-btn" id="change-code">קוד אחר</button>
+      </div>
+      <form id="username-form" novalidate>
+        <label class="muted" for="username">שם המשתמש שקיבלת מהמורה</label>
+        <input id="username" class="input-field" type="text" maxlength="40" autocomplete="off"
+               autocapitalize="off" spellcheck="false">
+        <div class="login-msg" role="alert"></div>
+        <button type="submit" class="btn btn-primary btn-block">${escapeHtml(t('start_btn', gender))}</button>
+      </form>
+    `;
+    const form = stepEl.querySelector('#username-form');
+    const input = form.querySelector('#username');
+    const msgEl = form.querySelector('.login-msg');
+    const submitBtn = form.querySelector('button[type=submit]');
+    stepEl.querySelector('#change-code').addEventListener('click', () => { setTitle('f'); showCodeStep(''); });
+    input.focus();
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (input.value.trim().length < 2) { msgEl.textContent = LOGIN_MSG.no_username(gender); return; }
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'רגע…';
+      const res = await Progress.loginWithClassCode(code, { username: input.value });
+      if (res.ok) { location.hash = '#roadmap'; return; }
+      if (res.reason === 'bad_code') { showCodeStep(code, LOGIN_MSG.bad_code()); return; }
+      msgEl.textContent = (LOGIN_MSG[res.reason] || LOGIN_MSG.network)(gender);
+      submitBtn.disabled = false;
+      submitBtn.textContent = t('start_btn', gender);
+    });
   }
 
   function showPickStep(code, cls, students) {

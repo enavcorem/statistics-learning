@@ -10,6 +10,8 @@
 import { CHAPTERS, COURSE, getFlatUnits, findChapter } from '../content/manifest.js';
 import { supabaseClient } from '../js/supabase-config.js';
 import { XP_VALUES } from '../js/progress.js';
+import { COURSES } from './courses.js';
+import { showRosterPanel } from './roster-panel.js';
 
 // המורות יושבות במסד (טבלת teachers, מיגרציה 02). הסיסמה נבדקת בשרת,
 // וכל מורה מקבלת רק את הכיתות שלה. בשיחה 2ג: כניסה עם גוגל, ו-RLS
@@ -52,6 +54,11 @@ function computeXP(progressMap) {
     if (isUnitDone(u.id, progressMap)) xp += XP_VALUES[u.type] || 10;
   });
   return xp;
+}
+
+// תלמיד שהמורה הוסיפה ועוד לא נכנס: last_seen לפני created_at (מיגרציה 03)
+function hasLoggedIn(s) {
+  return !!s.last_seen && (!s.created_at || new Date(s.last_seen) >= new Date(s.created_at));
 }
 
 function unitTitle(unitId) {
@@ -100,7 +107,20 @@ async function tryLogin() {
   $('login-screen').style.display = 'none';
   $('dashboard').style.display = 'block';
   $('teacher-who').textContent = data.is_admin ? `${data.name} · מנהלת, כל הכיתות` : `${data.name} · הכיתות שלי`;
+  renderCoursesBar();
   loadData();
+}
+
+// "הלומדות שלי": אותו שם משתמש וסיסמה פותחים את לוח המורה בכל הלומדות,
+// והכיתות והתלמידים משותפים לכולן. הרשימה ב-teacher/courses.js.
+function renderCoursesBar() {
+  const bar = $('courses-bar');
+  if (!bar) return;
+  const here = new URL('..', location.href).href;
+  const links = COURSES.filter((c) => c.url).map((c) => (here === c.url
+    ? `<span class="course-chip course-chip-here">${c.icon} ${escapeHtml(c.title)} (כאן)</span>`
+    : `<a class="course-chip" href="${escapeHtml(c.url)}teacher/">${c.icon} ${escapeHtml(c.title)}</a>`)).join('');
+  bar.innerHTML = `<span class="muted">הלומדות שלי (אותה כניסה, אותן כיתות):</span> ${links}`;
 }
 
 async function loadData() {
@@ -198,8 +218,9 @@ function renderClassCodes() {
       <div class="class-code-label">${escapeHtml(c.label)} · ${escapeHtml(c.school_year)}</div>
       ${showTeacher && c.teacher_name ? `<div class="class-code-meta">${escapeHtml(c.teacher_name)}</div>` : ''}
       <div class="class-code-num" dir="ltr">${escapeHtml(c.join_code)}</div>
-      <div class="class-code-meta">${c.student_count} רשומות</div>
+      <div class="class-code-meta">${c.student_count} רשומות · ${c.login_mode === 'username' ? '🔑 שם משתמש מהמורה' : '📋 בחירה מרשימה'}</div>
       <div class="class-code-actions">
+        <button type="button" class="btn btn-ghost class-code-roster" data-id="${c.id}">👥 תלמידים ושמות משתמש</button>
         <button type="button" class="btn btn-ghost class-code-copy" data-code="${escapeHtml(c.join_code)}">📋 העתקת קישור</button>
         <button type="button" class="btn btn-ghost class-code-archive" data-id="${c.id}" title="הקוד יפסיק לעבוד. ההתקדמות של התלמידות נשמרת">🗄️ לארכיון</button>
       </div>
@@ -215,6 +236,9 @@ function renderClassCodes() {
     } catch (e) {
       window.prompt('הקישור לכיתה:', link);
     }
+  }));
+  box.querySelectorAll('.class-code-roster').forEach((btn) => btn.addEventListener('click', () => {
+    showRosterPanel(allClasses.find((c) => c.id === btn.dataset.id), { teacherRpc, escapeHtml, onChange: loadData });
   }));
   box.querySelectorAll('.class-code-archive').forEach((btn) => btn.addEventListener('click', async () => {
     const cls = allClasses.find((c) => c.id === btn.dataset.id);
@@ -253,6 +277,12 @@ function showNewClassForm() {
       <label>לשון פנייה ברירת מחדל
         <select class="input-field" id="nc-gender"><option value="f">נקבה</option><option value="m">זכר</option></select>
       </label>
+      <label>איך נכנסים
+        <select class="input-field" id="nc-mode">
+          <option value="pick">בחירה מרשימה (כל אחד בוחר את שמו או מוסיף את עצמו)</option>
+          <option value="username">שם משתמש מהמורה (אני מוסיפה את התלמידים)</option>
+        </select>
+      </label>
       <div class="form-actions">
         <button type="submit" class="btn btn-primary">יצירת כיתה</button>
         <button type="button" class="btn btn-ghost" id="nc-cancel">ביטול</button>
@@ -270,6 +300,14 @@ function showNewClassForm() {
     if (error || !data) { $('nc-err').textContent = 'אין חיבור לשרת כרגע'; return; }
     if (data.status === 'bad_label') { $('nc-err').textContent = 'צריך שם לכיתה'; return; }
     if (data.status !== 'ok') { $('nc-err').textContent = 'הכניסה פגה. כדאי לרענן את הדף ולהיכנס שוב'; return; }
+    // הכיתה נפתחת תמיד כ"בחירה מרשימה" (teacher_create_class לא השתנתה), ומיד מחליפים
+    if ($('nc-mode').value === 'username') {
+      await teacherRpc('teacher_set_login_mode', { p_class_id: data.class.id, p_mode: 'username' });
+      data.class.login_mode = 'username';
+      await loadData();
+      showRosterPanel(data.class, { teacherRpc, escapeHtml, onChange: loadData });
+      return;
+    }
     panel.innerHTML = `<h2>✅ הכיתה נפתחה</h2>
       <p><strong>${escapeHtml(data.class.label)}</strong> · הקוד: <strong dir="ltr" class="class-code-inline">${escapeHtml(data.class.join_code)}</strong></p>
       <p class="muted">הקוד עובד בכל הלומדות. "העתקת קישור" בכרטיס של הכיתה נותן קישור שהקוד כבר בתוכו.</p>
@@ -351,7 +389,7 @@ function renderStats() {
   let totalXP = 0;
 
   allStudents.forEach((s) => {
-    if (s.last_seen && new Date(s.last_seen).toDateString() === today) activeToday++;
+    if (hasLoggedIn(s) && new Date(s.last_seen).toDateString() === today) activeToday++;
     const pm = progressByStudent[s.id] || {};
     const doneCount = GATING_UNITS.filter((u) => isUnitDone(u.id, pm)).length;
     if (GATING_UNITS.length > 0 && doneCount === GATING_UNITS.length) completedAll++;
@@ -402,7 +440,7 @@ function renderTable() {
       return `<td style="text-align:center;"><span class="dot ${cls}" title="${escapeHtml(ch.title)}">${symbol}</span></td>`;
     }).join('');
 
-    const lastSeen = s.last_seen
+    const lastSeen = hasLoggedIn(s)
       ? new Date(s.last_seen).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
       : '—';
 
@@ -448,12 +486,28 @@ function buildDetailHTML(student) {
 
   const quizzes = quizByStudent[student.id] || {};
   const quizUnitIds = Object.keys(quizzes);
-  html += '<div class="detail-section"><div class="detail-section-title">📝 תשובות מבחנים</div>';
+  const isOpenUnit = (id) => (quizzes[id] || []).length && quizzes[id].every((a) => a.open === true);
+  const allOpen = quizUnitIds.length && quizUnitIds.every(isOpenUnit);
+  html += `<div class="detail-section"><div class="detail-section-title">${allOpen ? '📝 מה נכתב' : '📝 תשובות מבחנים'}</div>`;
   if (quizUnitIds.length === 0) {
     html += '<div class="muted">עדיין לא הגישה שום מבחן.</div>';
   } else {
     quizUnitIds.forEach((unitId) => {
       const answers = quizzes[unitId] || [];
+      // תשובות פתוחות (שדות כתיבה של קורס, מסומנות open: true): בלי ציון
+      // ובלי ✅/❌, והטקסט המלא נשמר עם שורות, כי זה מה שהמורה באה לקרוא.
+      if (isOpenUnit(unitId)) {
+        html += `<div style="margin-bottom:var(--space-3);"><strong>${escapeHtml(unitTitle(unitId))}</strong>`;
+        html += '<table class="answers-table"><thead><tr><th>שדה</th><th>מה נכתב</th></tr></thead><tbody>';
+        answers.forEach((a) => {
+          html += `<tr class="open-row">
+            <td>${escapeHtml(a.question_text || '')}</td>
+            <td class="open-answer">${escapeHtml(a.answer_given || '—')}</td>
+          </tr>`;
+        });
+        html += '</tbody></table></div>';
+        return;
+      }
       const correctCount = answers.filter((a) => a.is_correct).length;
       const score = answers.length ? Math.round((correctCount / answers.length) * 100) : 0;
       html += `<div style="margin-bottom:var(--space-3);"><strong>${escapeHtml(unitTitle(unitId))}</strong> — ציון ${score} (${correctCount}/${answers.length})`;

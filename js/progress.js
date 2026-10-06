@@ -278,15 +278,26 @@ export async function fetchClassRoster(code) {
   return { ok: true, cls: data.class, students: data.students };
 }
 
-// pick: { studentId } לתלמידה מהרשימה, או { newName } ל"אני חדשה".
+// pick: { studentId } לתלמידה מהרשימה, { newName } ל"אני חדשה",
+// או { username } בכיתה שבה המורה נותנת שמות משתמש (login_mode: 'username').
 // מחזירה { ok: true, student } או { ok: false, reason }:
-// bad_code / bad_name / name_taken / network
+// bad_code / bad_name / name_taken / bad_username / locked / network
 export async function loginWithClassCode(code, pick, gender) {
   const normCode = normalizeClassCode(code);
-  const g = gender === 'm' ? 'm' : 'f';
+  let g = gender === 'm' ? 'm' : 'f';
   let studentId = pick.studentId;
 
-  if (!studentId) {
+  if (pick.username !== undefined) {
+    const { data, error } = await supabaseClient.rpc('login_with_username', { p_code: normCode, p_username: pick.username });
+    if (error) {
+      console.warn('login_with_username נכשל:', error);
+      return { ok: false, reason: 'network' };
+    }
+    if (data.status !== 'ok') return { ok: false, reason: data.status };
+    studentId = data.student_id;
+    // לשון הפנייה נשמרת אצל התלמיד (המורה קבעה אותה בהוספה), ולא נשאלת במסך
+    if (!gender) g = data.gender === 'm' ? 'm' : 'f';
+  } else if (!studentId) {
     const { data, error } = await supabaseClient.rpc('join_class', { p_code: normCode, p_name: pick.newName, p_gender: g });
     if (error) {
       console.warn('join_class נכשל:', error);
@@ -448,10 +459,41 @@ export function chapterStatus(chapterId) {
 
 // ===== מבחנים =====
 
+// מחזירה Promise שמתקיים ל-true כשהשמירה הגיעה ל-Supabase, ול-false אם
+// נשארה רק במכשיר. קוראים ישנים מתעלמים מהערך — זה בסדר, השמירה המקומית
+// קורית בכל מקרה ומיד.
 export function saveQuizAnswers(unitId, answersArray) {
   mutateBucket((bucket) => { bucket.quizAnswers[unitId] = answersArray; });
   const student = getStudent();
-  if (student) fireAndForget(supabaseUpsertQuizAnswers(student.id, unitId, answersArray));
+  if (!student) return Promise.resolve(false);
+  const sync = supabaseUpsertQuizAnswers(student.id, unitId, answersArray).then(() => true);
+  fireAndForget(sync);
+  return sync.catch(() => false);
+}
+
+// התשובות השמורות במכשיר ליחידה (או null). משמש בלוקים של קורס שצריכים
+// להחזיר לתלמידה את מה שכתבה — למשל שדות כתיבה פתוחים.
+export function getQuizAnswers(unitId) {
+  const bucket = getCurrentBucket();
+  return (bucket && bucket.quizAnswers[unitId]) || null;
+}
+
+// השורה של היחידה ישירות מ-Supabase, בלי לגעת במטמון המקומי.
+// השרת נקרא רק בכניסה, ולכן במכשיר שנשאר מחובר (הבית) המטמון עלול להיות
+// ישן אם בינתיים כתבו ממחשב אחר (בית הספר). הקורא מחליט מה עדכני יותר.
+// מחזירה { answers, submittedAt }, או null אם אין שורה, ו-undefined בשגיאת רשת.
+export async function fetchRemoteQuizAnswers(unitId) {
+  const student = getStudent();
+  if (!student) return undefined;
+  try {
+    const { data, error } = await supabaseClient.from('quiz_answers')
+      .select('answers, submitted_at').eq('student_id', student.id).eq('unit_id', unitId).maybeSingle();
+    if (error) throw error;
+    return data ? { answers: data.answers, submittedAt: data.submitted_at } : null;
+  } catch (e) {
+    console.warn('לא הצלחנו לקרוא תשובות מ-Supabase:', e);
+    return undefined;
+  }
 }
 
 // ===== אתגר פטור =====
