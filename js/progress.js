@@ -63,6 +63,38 @@ export function isClassMode() {
   catch (e) { return false; }
 }
 
+// ===== לומדה פתוחה לכיתה — המורה מחליטה בלוח (מיגרציה 04) =====
+// לפני מבחן המורה פותחת את כל הפרקים לכיתה מסוימת, בלומדה הזו בלבד.
+// השרת הוא מקור האמת; במכשיר נשמר מזהה התלמידה שהלומדה פתוחה לה, כדי
+// שגם בלי רשת יהיה ערך אחרון, ושתלמידה אחרת באותו מכשיר לא "תירש" אותו.
+// בניגוד למצב כיתה, רק הנעילה בין פרקים נפתחת — בתוך פרק הכול כרגיל.
+const KEY_COURSE_OPEN = `${COURSE_ID}_course_open`;
+
+export function isCourseOpenForClass() {
+  const s = getStudent();
+  if (!s) return false;
+  try { return localStorage.getItem(KEY_COURSE_OPEN) === s.id; }
+  catch (e) { return false; }
+}
+
+// שואלת את השרת ומעדכנת את המטמון. מחזירה true אם המצב השתנה.
+// מסד בלי מיגרציה 04 עונה בשגיאה — אז נשארים עם מה שהיה (סגור).
+export async function refreshCourseOpen() {
+  const s = getStudent();
+  if (!s) return false;
+  const before = isCourseOpenForClass();
+  try {
+    const { data, error } = await supabaseClient.rpc('student_course_open', { p_student_id: s.id, p_course: COURSE_ID });
+    if (error) throw error;
+    if (data === true) localStorage.setItem(KEY_COURSE_OPEN, s.id);
+    else localStorage.removeItem(KEY_COURSE_OPEN);
+  } catch (e) {
+    console.warn('student_course_open נכשל (ממשיכים עם הערך האחרון):', e);
+    return false;
+  }
+  return isCourseOpenForClass() !== before;
+}
+
 export const XP_VALUES = { lesson: 10, lab: 10, quiz: 20, reference: 5, exemption: 30 };
 
 // בודקים שהאחסון באמת עובד (לא רק זמין) — גלישה פרטית/הגדרות דפדפן
@@ -335,6 +367,7 @@ export async function loginWithClassCode(code, pick, gender) {
   saveBucket(key, bucket);
   writeJSON(KEY_CURRENT, key);
   try { localStorage.setItem(KEY_LAST_CLASS_CODE, normCode); } catch (e) { /* לא קריטי */ }
+  await refreshCourseOpen();
   return { ok: true, student: bucket.student };
 }
 
@@ -405,10 +438,17 @@ export function canAccessUnit(unitId) {
   // פטור של פרק 4 בלי לגעת בפרקים 1-3 בכלל — לא הגיוני, כי אתגר פטור
   // מניח שכבר שולטים בחומר הקודם. הפרקים עצמם נשארים ברצף, גם אם פרק
   // בודד מסומן "unordered" מבפנים.
-  for (const u of flat) {
-    if (u.chapterNumber >= chapter.number) break;
-    if (u.type === 'exemption' || u.type === 'bonus') continue;
-    if (!isUnitDone(u.id, all)) return false;
+  //
+  // חריג: לומדת חזרה (`openChapters: true` ב-COURSE). שם כל פרק עומד בפני
+  // עצמו, והתלמידה צריכה לקפוץ ישר לנושא שקשה לה לפני מבחן. קורס שלא
+  // ביקש — מתנהג בדיוק כמו קודם.
+  // וחריג שני: המורה פתחה את הלומדה לכיתה בלוח (isCourseOpenForClass).
+  if (COURSE.openChapters !== true && !isCourseOpenForClass()) {
+    for (const u of flat) {
+      if (u.chapterNumber >= chapter.number) break;
+      if (u.type === 'exemption' || u.type === 'bonus') continue;
+      if (!isUnitDone(u.id, all)) return false;
+    }
   }
 
   // בתוך הפרק עצמו, אתגר הפטור תמיד פתוח — הוא בדיוק החלופה לעבור על

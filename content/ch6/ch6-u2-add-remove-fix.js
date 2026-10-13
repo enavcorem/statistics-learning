@@ -24,8 +24,8 @@ export default {
         type: 'mc',
         prompt: 'מקרה ב׳: התלמיד החדש קיבל 100. לאיזה כיוון יזוז הממוצע?',
         options: [
-          { text: 'יעלה', correct: true },
           { text: 'ירד', correct: false, hint: 'הוא קיבל מעל הממוצע, אז הוא מושך אותו למעלה.' },
+          { text: 'יעלה', correct: true },
         ],
       },
     },
@@ -35,8 +35,8 @@ export default {
         type: 'mc',
         prompt: 'אם התלמיד קיבל 80 (כמו הממוצע), מה קרה למדדי הפיזור?',
         options: [
-          { text: 'הפיזור יגדל', correct: false, hint: 'להפך — הוספנו מישהו בול במרכז, זה מחזק את האחידות.' },
           { text: 'הפיזור יקטן', correct: true },
+          { text: 'הפיזור יגדל', correct: false, hint: 'להפך — הוספנו מישהו בול במרכז, זה מחזק את האחידות.' },
         ],
       },
     },
@@ -50,8 +50,8 @@ export default {
         type: 'mc',
         prompt: 'מה קרה לממוצע החדש?',
         options: [
-          { text: 'עלה', correct: true },
           { text: 'ירד', correct: false, hint: 'הורדנו ציון גרוע — המצב השתפר, לא התדרדר.' },
+          { text: 'עלה', correct: true },
         ],
       },
     },
@@ -76,8 +76,8 @@ export default {
         type: 'mc',
         prompt: 'מה יקרה לממוצע?',
         options: [
-          { text: 'יישאר אותו דבר', correct: false, hint: 'סכום הציונים הכללי גדל ב-30 נקודות, אז הממוצע חייב לגדול.' },
           { text: 'יגדל', correct: true },
+          { text: 'יישאר אותו דבר', correct: false, hint: 'סכום הציונים הכללי גדל ב-30 נקודות, אז הממוצע חייב לגדול.' },
         ],
       },
     },
@@ -89,8 +89,8 @@ export default {
         type: 'mc',
         prompt: 'מה קרה לפיזור (סטיית התקן)?',
         options: [
-          { text: 'הפיזור קטן', correct: true },
           { text: 'הפיזור גדל', correct: false, hint: 'הציון החדש (90) קרוב יותר לממוצע (80) מאשר הציון הישן (60).' },
+          { text: 'הפיזור קטן', correct: true },
         ],
       },
     },

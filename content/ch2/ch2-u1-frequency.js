@@ -30,8 +30,8 @@ export default {
         options: [
           { text: '3 פעמים', correct: false, hint: 'המספר 2 מופיע יותר מ-3 פעמים — ספרי שוב.' },
           { text: '4 פעמים', correct: false, hint: 'כמעט, אבל יש עוד אחד שהתפספס.' },
-          { text: '5 פעמים', correct: true },
           { text: '6 פעמים', correct: false, hint: 'יותר מדי — אין 6 פעמים את המספר 2 ברשימה.' },
+          { text: '5 פעמים', correct: true },
         ],
       },
     },

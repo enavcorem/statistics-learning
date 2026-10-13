@@ -7,7 +7,7 @@
 // (אפשר לערוך) → שמירה. ואחר כך: אקסל, פתקים להדפסה, הודעה להעתקה.
 // המייל (רשות) נשמר לקראת כניסת גוגל: מי שיתחבר במייל הזה יקושר לתלמיד.
 
-import { COURSE } from '../content/manifest.js';
+import { COURSE, COURSE_ID } from '../content/manifest.js';
 
 let ctx = null;   // { teacherRpc, escapeHtml, onChange }
 let cls = null;   // הכיתה מ-teacher_classes
@@ -55,6 +55,7 @@ function close() {
 
 function render() {
   const isUser = cls.login_mode === 'username';
+  const isOpen = (cls.open_courses || []).includes(COURSE_ID);
   const missing = rows.filter((r) => !r.username).length;
   const panel = $('form-panel');
   panel.innerHTML = `
@@ -71,6 +72,15 @@ function render() {
         <strong>שם משתמש מהמורה</strong> <span class="muted">— מקלידים שם משתמש שנתתי. אין רשימה ואין "חדש"</span></label>
     </fieldset>
     ${isUser && missing ? `<p class="rp-warn">⚠️ ${missing} בלי שם משתמש, ולכן לא יוכלו להיכנס. אפשר לתת להם עם ✏️ בטבלה.</p>` : ''}
+
+    ${COURSE.openChapters === true ? '' : `
+    <fieldset class="rp-mode">
+      <legend>הפרקים בלומדה "${esc(COURSE.title)}"</legend>
+      <label><input type="radio" name="rp-open" value="0" ${isOpen ? '' : 'checked'}>
+        <strong>🔒 לפי הסדר</strong> <span class="muted">— פרק נפתח אחרי שמסיימים את הקודם, או עוברים את אתגר הפטור</span></label>
+      <label><input type="radio" name="rp-open" value="1" ${isOpen ? 'checked' : ''}>
+        <strong>🔓 הכול פתוח (לחזרה)</strong> <span class="muted">— כל הפרקים פתוחים לכיתה הזו, למשל לפני מבחן. בלומדות האחרות לא משתנה כלום</span></label>
+    </fieldset>`}
 
     ${rows.length ? `
     <div class="rp-tools">
@@ -114,6 +124,7 @@ function render() {
 
   $('rp-close').addEventListener('click', close);
   panel.querySelectorAll('input[name=rp-mode]').forEach((r) => r.addEventListener('change', () => setMode(r.value)));
+  panel.querySelectorAll('input[name=rp-open]').forEach((r) => r.addEventListener('change', () => setCourseOpen(r.value === '1')));
   $('rp-pattern').addEventListener('change', () => { $('rp-prefix').style.display = $('rp-pattern').value === 'num' ? '' : 'none'; });
   $('rp-suggest').addEventListener('click', suggest);
   if (rows.length) {
@@ -140,8 +151,24 @@ async function setMode(mode) {
   if (mode === 'pick' &&
       !window.confirm('במצב "בחירה מרשימה" כל אחד יכול לבחור כל שם מהרשימה, או להוסיף שם חדש בעצמו.\nלעבור?')) { render(); return; }
   const { data } = await ctx.teacherRpc('teacher_set_login_mode', { p_class_id: cls.id, p_mode: mode });
-  if (!data) { $('rp-err').textContent = 'לא הצלחנו לשנות. כדאי לרענן את הדף ולנסות שוב'; render(); return; }
+  if (!data) { render(); $('rp-err').textContent = 'לא הצלחנו לשנות. כדאי לרענן את הדף ולנסות שוב'; return; }
   cls.login_mode = mode;
+  render();
+  ctx.onChange();
+}
+
+// פתיחת כל הפרקים בלומדה הזו, לכיתה הזו בלבד (מיגרציה 04)
+async function setCourseOpen(open) {
+  const msg = open
+    ? `לפתוח את כל הפרקים בלומדה "${COURSE.title}" לכיתה ${cls.label}?
+התלמידות יראו את השינוי בכניסה הבאה ללומדה (או ברענון הדף).`
+    : `לחזור לפתיחה לפי הסדר בלומדה "${COURSE.title}"?
+מה שהושלם נשאר מושלם. פרקים שעוד לא הגיעו אליהם לפי הסדר יינעלו שוב, גם אם התחילו אותם.`;
+  if (!window.confirm(msg)) { render(); return; }
+  const { data } = await ctx.teacherRpc('teacher_set_course_open', { p_class_id: cls.id, p_course: COURSE_ID, p_open: open });
+  if (!data) { render(); $('rp-err').textContent = 'לא הצלחנו לשנות. ייתכן שמיגרציה 04 עוד לא רצה במסד. כדאי לרענן ולנסות שוב'; return; }
+  const list = (cls.open_courses || []).filter((c) => c !== COURSE_ID);
+  cls.open_courses = open ? [...list, COURSE_ID] : list;
   render();
   ctx.onChange();
 }

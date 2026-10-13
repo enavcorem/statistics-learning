@@ -39,9 +39,9 @@ export default {
         type: 'mc',
         prompt: 'בחרי את הנוסחה הנכונה לחציון:',
         options: [
-          { text: '<span class="ltr">=MEDIAN(A1:A4)</span>', correct: true },
           { text: '<span class="ltr">=AVERAGE(A1:A4)</span>', correct: false, hint: 'זו הנוסחה לממוצע — היא לא "מסדרת" את הנתונים כמו החציון.' },
           { text: '<span class="ltr">=MEDIAN(A1:A5)</span>', correct: false, hint: 'שימי לב לטווח — הנתונים נמצאים ב-A1:A4 בלבד.' },
+          { text: '<span class="ltr">=MEDIAN(A1:A4)</span>', correct: true },
           { text: '<span class="ltr">=MODE(A1:A4)</span>', correct: false, hint: 'זו הנוסחה לשכיח, לא לחציון.' },
         ],
       },

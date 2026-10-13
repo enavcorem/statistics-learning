@@ -7,15 +7,16 @@
 // נתיבים יחסיים ולא מוחלטים (`/content/...`): כך הדשבורד עובד גם כשהאתר
 // מתארח בתת-תיקייה (GitHub Pages של ריפו אחד עם כמה לומדות), ולא רק
 // כשהוא יושב בשורש הדומיין.
-import { CHAPTERS, COURSE, getFlatUnits, findChapter } from '../content/manifest.js';
+import { CHAPTERS, COURSE, COURSE_ID, getFlatUnits, findChapter } from '../content/manifest.js';
 import { supabaseClient } from '../js/supabase-config.js';
 import { XP_VALUES } from '../js/progress.js';
-import { COURSES } from './courses.js';
+import { coursesForTeacher, groupByGrade, teacherUrl } from './courses.js';
 import { showRosterPanel } from './roster-panel.js';
+import { showNewTeacherForm, showTeachersPanel } from './admin-panel.js';
 
 // המורות יושבות במסד (טבלת teachers, מיגרציה 02). הסיסמה נבדקת בשרת,
-// וכל מורה מקבלת רק את הכיתות שלה. בשיחה 2ג: כניסה עם גוגל, ו-RLS
-// שסוגר את טבלאות התלמידות.
+// וכל מורה מקבלת רק את הכיתות שלה, ורק את הלומדות שהמנהלת סימנה לה
+// (מיגרציה 04). בשיחה 2ג: כניסה עם גוגל, ו-RLS שסוגר את טבלאות התלמידות.
 
 document.title = COURSE.teacherTitle;
 const titleEl = document.getElementById('teacher-title');
@@ -82,13 +83,35 @@ let exemptionsByStudent = {};
 let allClasses = [];
 let classesByStudent = {};
 let expandedId = null;
-// { login, password, teacher: { id, name, is_admin, current_year } }.
-// בזיכרון בלבד: רענון הדף מחזיר למסך הכניסה.
+// { login, secret, teacher: { id, name, is_admin, courses, current_year, token } }.
+// secret = הטוקן שהמסד נתן בכניסה (מיגרציה 04), או הסיסמה במסד ישן בלי טוקן.
 let session = null;
 
-// כל פעולה של מורה עוברת דרך פונקציה במסד שבודקת שם משתמש וסיסמה (מיגרציה 02)
+// כל פעולה של מורה עוברת דרך פונקציה במסד שבודקת שם משתמש וסיסמה או
+// טוקן (lomda_check_teacher, מיגרציות 02 ו-04)
 function teacherRpc(fn, args = {}) {
-  return supabaseClient.rpc(fn, { p_login: session.login, p_password: session.password, ...args });
+  return supabaseClient.rpc(fn, { p_login: session.login, p_password: session.secret, ...args });
+}
+
+// ===== כניסה אחת לכל הלומדות =====
+// כל הלומדות יושבות באותו דומיין, ולכן sessionStorage של הלשונית משותף לכולן:
+// מעבר ללומדה אחרת או רענון לא מבקשים כניסה מחדש. נשמר הטוקן (8 שעות,
+// במסד), אף פעם לא הסיסמה. סגירת הלשונית או "יציאה" מוחקות אותו.
+const KEY_TEACHER_SESSION = 'lomda_teacher_session';
+
+function saveSession() {
+  try {
+    if (session.teacher.token) sessionStorage.setItem(KEY_TEACHER_SESSION, JSON.stringify({ login: session.login, token: session.teacher.token }));
+  } catch (e) { /* בלי אחסון — פשוט ייכנסו שוב בלומדה הבאה */ }
+}
+
+function readSavedSession() {
+  try { return JSON.parse(sessionStorage.getItem(KEY_TEACHER_SESSION) || 'null'); }
+  catch (e) { return null; }
+}
+
+function clearSavedSession() {
+  try { sessionStorage.removeItem(KEY_TEACHER_SESSION); } catch (e) { /* לא קריטי */ }
 }
 
 async function tryLogin() {
@@ -103,24 +126,92 @@ async function tryLogin() {
     return;
   }
   if (!data) { $('pass-err').textContent = 'שם משתמש או סיסמה שגויים'; return; }
-  session = { login, password, teacher: data };
+  enterDashboard(login, data, data.token || password);
+}
+
+// כניסה שמורה מהלשונית (מלומדה אחרת, או לפני רענון). טוקן שפג → מסך הכניסה.
+async function resumeSession() {
+  const saved = readSavedSession();
+  if (!saved || !saved.login || !saved.token) return;
+  $('login-screen').style.display = 'none';
+  const { data, error } = await supabaseClient.rpc('teacher_login', { p_login: saved.login, p_password: saved.token });
+  if (error || !data) {
+    if (!error) clearSavedSession();
+    $('login-screen').style.display = '';
+    $('teacher-login').value = saved.login;
+    return;
+  }
+  enterDashboard(saved.login, data, saved.token);
+}
+
+async function logout() {
+  if (session.teacher.token) await supabaseClient.rpc('teacher_logout', { p_token: session.teacher.token });
+  clearSavedSession();
+  location.reload();
+}
+
+function enterDashboard(login, teacher, secret) {
+  session = { login, secret, teacher };
+  saveSession();
   $('login-screen').style.display = 'none';
   $('dashboard').style.display = 'block';
-  $('teacher-who').textContent = data.is_admin ? `${data.name} · מנהלת, כל הכיתות` : `${data.name} · הכיתות שלי`;
-  renderCoursesBar();
+  $('teacher-who').textContent = teacher.is_admin ? `${teacher.name} · מנהלת, כל הכיתות` : `${teacher.name} · הכיתות שלי`;
+  const mine = coursesForTeacher(teacher);
+  renderCourseSwitcher(mine);
+  if (!teacher.is_admin && Array.isArray(teacher.courses) && !teacher.courses.includes(COURSE_ID)) {
+    renderNoAccess(mine);
+    return;
+  }
   loadData();
 }
 
-// "הלומדות שלי": אותו שם משתמש וסיסמה פותחים את לוח המורה בכל הלומדות,
-// והכיתות והתלמידים משותפים לכולן. הרשימה ב-teacher/courses.js.
-function renderCoursesBar() {
+// מעבר ללומדה אחרת: תפריט אחד, מקובץ לפי שכבה, כדי שגם הרבה לומדות ייכנסו
+// בלי למלא את ראש הדף. הרשימה ב-teacher/courses.js.
+function renderCourseSwitcher(mine) {
   const bar = $('courses-bar');
-  if (!bar) return;
-  const here = new URL('..', location.href).href;
-  const links = COURSES.filter((c) => c.url).map((c) => (here === c.url
-    ? `<span class="course-chip course-chip-here">${c.icon} ${escapeHtml(c.title)} (כאן)</span>`
-    : `<a class="course-chip" href="${escapeHtml(c.url)}teacher/">${c.icon} ${escapeHtml(c.title)}</a>`)).join('');
-  bar.innerHTML = `<span class="muted">הלומדות שלי (אותה כניסה, אותן כיתות):</span> ${links}`;
+  const others = mine.filter((c) => c.id !== COURSE_ID);
+  if (!bar || !others.length) return;
+  const options = groupByGrade(others).map(([grade, list]) => `<optgroup label="${escapeHtml(grade)}">${
+    list.map((c) => {
+      const url = teacherUrl(c);
+      return `<option value="${escapeHtml(url || '')}" ${url ? '' : 'disabled'}>${c.icon} ${escapeHtml(c.title)}${url ? '' : ' (עוד לא פורסמה)'}</option>`;
+    }).join('')}</optgroup>`).join('');
+  bar.innerHTML = `<label class="course-switch">🔀 מעבר ללומדה אחרת (אותה כניסה, אותן כיתות):
+    <select class="input-field" id="course-switch"><option value="">בחירת לומדה...</option>${options}</select></label>`;
+  $('course-switch').addEventListener('change', (e) => { if (e.target.value) location.href = e.target.value; });
+}
+
+// מורה שהגיעה ללוח של לומדה שהמנהלת לא סימנה לה: לא טוענים נתונים
+function renderNoAccess(mine) {
+  const links = mine.map((c) => (teacherUrl(c)
+    ? `<a class="btn btn-ghost" href="${escapeHtml(teacherUrl(c))}">${c.icon} ${escapeHtml(c.title)}</a>` : '')).join('');
+  $('stats-grid').innerHTML = '';
+  $('courses-bar').innerHTML = '';
+  $('class-codes').innerHTML = `<div class="card no-access">
+      <h2>הלומדה הזו לא ברשימה שלך</h2>
+      ${links ? `<p>הלומדות שלך:</p><div class="no-access-links">${links}</div>` : '<p>עוד לא נפתחה לך אף לומדה.</p>'}
+      <p class="muted">רוצה גישה ללומדה הזו? צריך לבקש מהמנהלת.</p>
+    </div>`;
+  document.querySelectorAll('.filters-row, .legend-row, .table-card').forEach((el) => { el.style.display = 'none'; });
+}
+
+// כל השורות של טבלה, בדפים. Supabase מחזיר לכל היותר 1000 שורות לבקשה
+// (API → Max rows) ולא מודיע שחתך, והטבלאות משותפות לכל הלומדות, כך
+// שבלי דפדוף הלוח היה מראה התקדמות חסרה בלי שאף אחד ישים לב.
+// מחזירה { data, error } כמו בקשה רגילה. orderBy חייב להסתיים במפתח ייחודי,
+// כדי שהסדר יהיה יציב בין הדפים. ממשיכים עד דף ריק, ולא עד דף "קצר",
+// כי ייתכן שבפרויקט הוגדר Max rows קטן מ-1000.
+const PAGE = 1000;
+async function fetchAll(table, orderBy = ['id']) {
+  const all = [];
+  for (;;) {
+    let q = supabaseClient.from(table).select('*');
+    orderBy.forEach((col) => { q = q.order(col); });
+    const { data, error } = await q.range(all.length, all.length + PAGE - 1);
+    if (error) { console.warn(`טעינת ${table} נכשלה:`, error); return { data: all, error }; }
+    if (!data.length) return { data: all, error: null };
+    all.push(...data);
+  }
 }
 
 async function loadData() {
@@ -131,12 +222,21 @@ async function loadData() {
 
   const [classesRes, enrollRes, studentsRes, progressRes, quizRes, exemptionRes] = await Promise.all([
     teacherRpc('teacher_classes'),
-    supabaseClient.from('enrollments').select('*'),
-    supabaseClient.from('students').select('*').order('class_name').order('name'),
-    supabaseClient.from('unit_progress').select('*'),
-    supabaseClient.from('quiz_answers').select('*'),
-    supabaseClient.from('exemption_attempts').select('*'),
+    fetchAll('enrollments', ['student_id', 'class_id']),
+    fetchAll('students', ['class_name', 'name', 'id']),
+    fetchAll('unit_progress'),
+    fetchAll('quiz_answers'),
+    fetchAll('exemption_attempts'),
   ]);
+
+  // הכניסה פגה (טוקן של 8 שעות, או "יציאה" בלשונית אחרת): המסד עונה null
+  // בלי שגיאה. בלי הבדיקה הזו הלוח היה נראה ריק, כאילו אין תלמידות.
+  if (classesRes.data === null && !classesRes.error) {
+    clearSavedSession();
+    window.alert('הכניסה ללוח פגה. צריך להיכנס שוב');
+    location.reload();
+    return;
+  }
 
   // הסינון כאן הוא עניין של סדר ולא של אבטחה: הכיתות מגיעות מהמסד לפי
   // המורה, אבל טבלאות התלמידות עדיין פתוחות ל-anon עד שיחה 2ג.
@@ -218,15 +318,16 @@ function renderClassCodes() {
       <div class="class-code-label">${escapeHtml(c.label)} · ${escapeHtml(c.school_year)}</div>
       ${showTeacher && c.teacher_name ? `<div class="class-code-meta">${escapeHtml(c.teacher_name)}</div>` : ''}
       <div class="class-code-num" dir="ltr">${escapeHtml(c.join_code)}</div>
-      <div class="class-code-meta">${c.student_count} רשומות · ${c.login_mode === 'username' ? '🔑 שם משתמש מהמורה' : '📋 בחירה מרשימה'}</div>
+      <div class="class-code-meta">${c.student_count} רשומות · ${c.login_mode === 'username' ? '🔑 שם משתמש מהמורה' : '📋 בחירה מרשימה'}${(c.open_courses || []).includes(COURSE_ID) ? ' · 🔓 כל הפרקים פתוחים' : ''}</div>
       <div class="class-code-actions">
-        <button type="button" class="btn btn-ghost class-code-roster" data-id="${c.id}">👥 תלמידים ושמות משתמש</button>
+        <button type="button" class="btn btn-ghost class-code-roster" data-id="${c.id}">👥 תלמידים והגדרות הכיתה</button>
         <button type="button" class="btn btn-ghost class-code-copy" data-code="${escapeHtml(c.join_code)}">📋 העתקת קישור</button>
         <button type="button" class="btn btn-ghost class-code-archive" data-id="${c.id}" title="הקוד יפסיק לעבוד. ההתקדמות של התלמידות נשמרת">🗄️ לארכיון</button>
       </div>
     </div>`).join('') + `
     <button type="button" class="class-code-tile class-code-add" id="add-class-btn">➕ כיתה חדשה</button>
-    ${showTeacher ? '<button type="button" class="class-code-tile class-code-add" id="add-teacher-btn">👩‍🏫 מורה חדשה</button>' : ''}`;
+    ${showTeacher ? `<button type="button" class="class-code-tile class-code-add" id="add-teacher-btn">👩‍🏫 מורה חדשה</button>
+      <button type="button" class="class-code-tile class-code-add" id="teachers-btn">🗂️ מורות ולומדות</button>` : ''}`;
 
   box.querySelectorAll('.class-code-copy').forEach((btn) => btn.addEventListener('click', async () => {
     const link = new URL('../?code=' + btn.dataset.code, location.href).href;
@@ -247,7 +348,11 @@ function renderClassCodes() {
     if (data) loadData(); else window.alert('לא הצלחנו להעביר לארכיון. כדאי לרענן ולנסות שוב');
   }));
   $('add-class-btn').addEventListener('click', showNewClassForm);
-  if (showTeacher) $('add-teacher-btn').addEventListener('click', showNewTeacherForm);
+  if (showTeacher) {
+    const adminCtx = { teacherRpc, escapeHtml, onChange: loadData };
+    $('add-teacher-btn').addEventListener('click', () => showNewTeacherForm(adminCtx));
+    $('teachers-btn').addEventListener('click', () => showTeachersPanel(adminCtx));
+  }
 }
 
 function closeFormPanel() {
@@ -313,64 +418,6 @@ function showNewClassForm() {
       <p class="muted">הקוד עובד בכל הלומדות. "העתקת קישור" בכרטיס של הכיתה נותן קישור שהקוד כבר בתוכו.</p>
       <button type="button" class="btn btn-ghost" id="nc-close">סגירה</button>`;
     $('nc-close').addEventListener('click', closeFormPanel);
-    loadData();
-  });
-}
-
-// סיסמה התחלתית למורה חדשה: בלי תווים שמתבלבלים (0/O, 1/l)
-function suggestPassword() {
-  const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
-  const bytes = crypto.getRandomValues(new Uint8Array(8));
-  return [...bytes].map((b) => chars[b % chars.length]).join('');
-}
-
-function showNewTeacherForm() {
-  const panel = $('form-panel');
-  panel.style.display = 'block';
-  panel.innerHTML = `
-    <h2>מורה חדשה</h2>
-    <p class="muted">היא תקבל אוטומטית "כיתת בדיקה" משלה, ותוכל לפתוח כיתות בעצמה.</p>
-    <form id="new-teacher-form" class="form-grid" novalidate>
-      <label>שם (מופיע בלוח)
-        <input class="input-field" id="nt-name" maxlength="40" placeholder="לדוגמה: רחל" required>
-      </label>
-      <label>שם משתמש (אותיות באנגלית)
-        <input class="input-field ltr-field" id="nt-login" maxlength="30" placeholder="rachel" autocomplete="off" required>
-      </label>
-      <label>סיסמה התחלתית
-        <input class="input-field ltr-field" id="nt-pass" maxlength="40" value="${suggestPassword()}" autocomplete="off">
-      </label>
-      <div class="form-actions">
-        <button type="submit" class="btn btn-primary">יצירת מורה</button>
-        <button type="button" class="btn btn-ghost" id="nt-cancel">ביטול</button>
-      </div>
-      <div class="err" id="nt-err"></div>
-    </form>`;
-  $('nt-cancel').addEventListener('click', closeFormPanel);
-  $('nt-name').focus();
-  $('new-teacher-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const name = $('nt-name').value.trim();
-    const login = $('nt-login').value.trim().toLowerCase();
-    const pass = $('nt-pass').value;
-    const { data, error } = await teacherRpc('admin_create_teacher', { p_new_login: login, p_new_name: name, p_new_password: pass });
-    if (error || !data) { $('nt-err').textContent = 'אין חיבור לשרת כרגע'; return; }
-    const msg = { bad_input: 'צריך שם, שם משתמש, וסיסמה של 6 תווים לפחות', login_taken: 'שם המשתמש הזה כבר תפוס', auth: 'רק מנהלת יכולה ליצור מורות' }[data.status];
-    if (msg) { $('nt-err').textContent = msg; return; }
-    const dashLink = location.href.split('?')[0].split('#')[0];
-    const text = `שלום ${name}, הנה הכניסה ללוח המורה:\n${dashLink}\nשם משתמש: ${login}\nסיסמה: ${pass}\n\nמחכה לך שם "כיתת בדיקה" עם הקוד ${data.test_code}. אפשר להיכנס ללומדה עם הקוד, כמו תלמידה, ולראות איך זה נראה בלוח.`;
-    panel.innerHTML = `<h2>✅ ${escapeHtml(name)} נוספה</h2>
-      <p class="muted">הודעה מוכנה לשליחה (הסיסמה לא נשמרת בשום מקום אחר — כדאי להעתיק עכשיו):</p>
-      <textarea class="input-field" id="nt-msg" rows="7" readonly>${escapeHtml(text)}</textarea>
-      <div class="form-actions">
-        <button type="button" class="btn btn-primary" id="nt-copy">📋 העתקה</button>
-        <button type="button" class="btn btn-ghost" id="nt-close">סגירה</button>
-      </div>`;
-    $('nt-copy').addEventListener('click', async () => {
-      try { await navigator.clipboard.writeText(text); $('nt-copy').textContent = '✅ הועתק'; }
-      catch (err) { $('nt-msg').select(); }
-    });
-    $('nt-close').addEventListener('click', closeFormPanel);
     loadData();
   });
 }
@@ -550,3 +597,13 @@ $('teacher-login').addEventListener('keydown', (e) => { if (e.key === 'Enter') $
 $('refresh-btn').addEventListener('click', loadData);
 $('filter-class').addEventListener('change', renderTable);
 $('filter-name').addEventListener('input', renderTable);
+$('logout-btn').addEventListener('click', logout);
+// חזרה עם "אחורה": הדפדפן מחזיר את הדף מהזיכרון כמו שהיה. התפריט חוזר
+// ל"בחירת לומדה...", כדי שאפשר יהיה לבחור שוב את אותה לומדה. ואם בינתיים
+// יצאו מהלוח (בלשונית הזו או בלומדה אחרת), לא משאירים את הנתונים מוצגים.
+window.addEventListener('pageshow', (e) => {
+  if (!e.persisted) return;
+  if ($('course-switch')) $('course-switch').value = '';
+  if (session && session.teacher.token && !readSavedSession()) location.reload();
+});
+resumeSession();

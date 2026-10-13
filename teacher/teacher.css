@@ -180,11 +180,32 @@
 .class-code-inline { font-size: 1.3rem; letter-spacing: 0.15em; color: var(--color-primary); }
 #nt-msg { direction: rtl; white-space: pre-wrap; font-family: var(--font-body); }
 
-/* ===== "הלומדות שלי" ===== */
-.courses-bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-bottom: var(--space-4); font-size: 0.9rem; }
-.course-chip { padding: 4px 12px; border-radius: var(--radius-full); border: 1px solid var(--border); background: var(--card-bg); color: var(--color-primary-dark); text-decoration: none; }
-a.course-chip:hover { border-color: var(--color-primary); }
-.course-chip-here { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+/* ===== מעבר ללומדה אחרת, ומסך "לא ברשימה שלך" ===== */
+.courses-bar { margin-bottom: var(--space-4); font-size: 0.9rem; }
+.course-switch { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); color: var(--text-muted); }
+.course-switch .input-field { width: auto; min-width: 240px; margin: 0; }
+.teacher-top .link-btn { background: none; border: none; padding: 0; font: inherit; color: var(--color-primary-dark); text-decoration: underline; cursor: pointer; }
+.no-access { grid-column: 1 / -1; }
+.no-access h2 { margin-top: 0; }
+.no-access-links { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-3); }
+
+/* ===== למנהלת: "מורות ולומדות" ומורה חדשה (admin-panel.js) ===== */
+.ap-list { display: grid; gap: var(--space-3); }
+.ap-row { border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--space-3); }
+.ap-who { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: baseline; margin-bottom: var(--space-2); }
+.ap-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+.ap-grade { font-size: 0.8rem; font-weight: 700; color: var(--text-muted); margin-inline-start: var(--space-2); }
+.ap-grade:first-child { margin-inline-start: 0; }
+.ap-chip { padding: 4px 12px; border-radius: var(--radius-full); border: 1px solid var(--border); background: var(--card-bg); color: var(--text-muted); font: inherit; font-size: 0.88rem; cursor: pointer; }
+.ap-chip[aria-pressed="true"] { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
+.ap-chip[aria-pressed="true"] .muted { color: inherit; }
+.ap-chip[aria-pressed="false"]::before { content: '+ '; }
+.ap-chip[aria-pressed="true"]::before { content: '✓ '; }
+.ap-chip:disabled { opacity: 0.6; cursor: wait; }
+.ap-status { font-size: 0.85rem; }
+.ap-ok { color: var(--success, #2e7d32); }
+.ap-bad { color: var(--danger); }
+.ap-field { grid-column: 1 / -1; display: grid; gap: var(--space-2); font-size: 0.88rem; color: var(--text-muted); }
 
 /* ===== חלון "תלמידים ושמות משתמש" (roster-panel.js) ===== */
 .rp-head { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); flex-wrap: wrap; }

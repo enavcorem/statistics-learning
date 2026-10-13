@@ -41,8 +41,8 @@ export default {
         type: 'mc',
         prompt: 'סוג דם (A, B, AB, O) — איזה סוג משתנה זה?',
         options: [
-          { text: 'איכותי שמי', correct: true },
           { text: 'איכותי סדור', correct: false, hint: 'אין שום "סדר" הגיוני בין סוגי הדם — A הוא לא "יותר" או "פחות" מ-B, הם פשוט שונים.' },
+          { text: 'איכותי שמי', correct: true },
           { text: 'כמותי', correct: false, hint: 'זו לא מדידה או ספירה — האותיות הן קטגוריות, לא מספרים.' },
         ],
       },

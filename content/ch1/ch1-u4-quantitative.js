@@ -13,8 +13,8 @@ export default {
         type: 'mc',
         prompt: 'משקל של תינוק בלידה — איזה סוג משתנה זה?',
         options: [
-          { text: 'בדיד', correct: false, hint: 'משקל מודדים על משקל, והוא יכול להיות 3.501 ק"ג — זה רצף.' },
           { text: 'רציף', correct: true },
+          { text: 'בדיד', correct: false, hint: 'משקל מודדים על משקל, והוא יכול להיות 3.501 ק"ג — זה רצף.' },
         ],
       },
     },
@@ -39,8 +39,8 @@ export default {
         type: 'mc',
         prompt: 'מספר חדרים בדירה (כולל חצאי חדרים, למשל 2.5) — איזה סוג משתנה זה?',
         options: [
-          { text: 'בדיד', correct: true },
           { text: 'רציף', correct: false, hint: 'זה מבלבל, אבל מכיוון שאין כל ערך אפשרי (אין 3.12 חדרים) — זה לא רציף.' },
+          { text: 'בדיד', correct: true },
         ],
       },
     },

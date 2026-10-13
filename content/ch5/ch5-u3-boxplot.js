@@ -20,8 +20,8 @@ export default {
         prompt: 'מה מייצג הקו האנכי שבתוך הקופסה?',
         options: [
           { text: 'הממוצע', correct: false, hint: 'תרשים קופסה כלל לא מציג ממוצע — רק את חמשת המספרים המבוססים על סדר וקיבוץ.' },
-          { text: 'החציון', correct: true },
           { text: 'המקסימום', correct: false, hint: 'המקסימום מסומן בקצה השפם, לא בתוך הקופסה.' },
+          { text: 'החציון', correct: true },
         ],
       },
     },

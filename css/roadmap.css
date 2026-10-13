@@ -65,6 +65,17 @@
 .path-node-wrap.state-locked .path-node { background: var(--border); color: var(--text-faint); }
 .path-node-label { font-size: 0.65rem; color: var(--text-muted); white-space: nowrap; }
 
+/* פס "כל הפרקים פתוחים" — המורה פתחה את הלומדה לכיתה (js/progress.js) */
+.course-open-note {
+  background: var(--card-bg);
+  border: 1px dashed var(--chapter-6);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
 /* --- XP counter --- */
 /* תג "מצב כיתה" — מוצג במקום מונה ה-XP כשהנעילה מבוטלת (?class=1).
    שייך למנוע ולא לקורס: התכונה עצמה יושבת ב-js/progress.js. */

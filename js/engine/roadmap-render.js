@@ -276,6 +276,16 @@ export function renderRoadmap(container) {
   wrap.appendChild(topBar);
   wrap.appendChild(renderPathStrip());
 
+  // המורה פתחה את הלומדה לכיתה (מיגרציה 04). עשרה פרקים פתוחים עלולים
+  // לבלבל מי שרק מתחילה — לכן מכוונים לאתגר הפטור כנקודת פתיחה.
+  if (Progress.isCourseOpenForClass() && !Progress.isClassMode()) {
+    const open = el('div', 'course-open-note');
+    const f = student.gender !== 'm';
+    open.innerHTML = `🔓 <strong>כל הפרקים פתוחים לחזרה.</strong>
+      ${f ? 'לא בטוחה' : 'לא בטוח'} מאיפה להתחיל? אתגר הפטור בראש כל פרק יגיד לך מה כבר יש לך ומה כדאי לחזק.`;
+    wrap.appendChild(open);
+  }
+
   const { done, total } = Progress.overallCompletion();
   const overall = el('div', 'overall-progress');
   overall.innerHTML = `

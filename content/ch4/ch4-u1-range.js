@@ -25,9 +25,9 @@ export default {
         type: 'mc',
         prompt: 'בחרי את הנוסחה הנכונה לטווח:',
         options: [
-          { text: '<span class="ltr">=MAX(A1:A4)-MIN(A1:A4)</span>', correct: true },
           { text: '<span class="ltr">=MAX(A1:A4)</span>', correct: false, hint: 'זה רק המקסימום — שכחת להחסיר את המינימום.' },
           { text: '<span class="ltr">=MAX(A1:A4)+MIN(A1:A4)</span>', correct: false, hint: 'הטווח הוא הפרש, לא סכום, בין המקסימום למינימום.' },
+          { text: '<span class="ltr">=MAX(A1:A4)-MIN(A1:A4)</span>', correct: true },
           { text: '<span class="ltr">=AVERAGE(A1:A4)</span>', correct: false, hint: 'זו הנוסחה לממוצע — לא קשורה לטווח.' },
         ],
       },

@@ -32,8 +32,8 @@ export default {
         type: 'mc',
         prompt: 'תסתכלי בטבלה למעלה על העמודה "צבע עיניים". מהו המושג המתאים לה?',
         options: [
-          { text: 'משתנה', correct: true },
           { text: 'תצפית', correct: false, hint: 'תצפית היא שורה שלמה (ילדה אחת), לא עמודה שלמה.' },
+          { text: 'משתנה', correct: true },
           { text: 'קבוע', correct: false, hint: 'הצבע לא זהה אצל כולן (יש חום ויש כחול), לכן הוא לא קבוע.' },
         ],
       },
@@ -47,9 +47,9 @@ export default {
         type: 'mc',
         prompt: 'כמה תצפיות יש בטבלה הזו?',
         options: [
-          { text: '3 תצפיות', correct: true },
           { text: '4 תצפיות', correct: false, hint: 'זהו מספר העמודות (המשתנים). התצפיות הן השורות.' },
           { text: 'תצפית אחת', correct: false, hint: 'יש כאן טבלה אחת, אבל בתוכה נתונים על 3 בנות שונות.' },
+          { text: '3 תצפיות', correct: true },
         ],
       },
     },
@@ -74,8 +74,8 @@ export default {
         type: 'mc',
         prompt: 'במחקר אחר בדקו 100 עצי אבוקדו וספרו פירות. מהו "עץ מספר 5" בטבלה?',
         options: [
-          { text: 'תצפית', correct: true },
           { text: 'קבוע', correct: false, hint: 'זן האבוקדו אולי קבוע, אבל העץ הספציפי הוא האובייקט הנחקר — כלומר התצפית.' },
+          { text: 'תצפית', correct: true },
         ],
       },
     },

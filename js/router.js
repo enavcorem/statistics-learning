@@ -55,3 +55,10 @@ async function route() {
 // אין צורך גם ב-DOMContentLoaded בנוסף לקריאה הישירה.
 window.addEventListener('hashchange', route);
 route();
+
+// המורה פותחת/סוגרת את הלומדה לכיתה בלוח — בודקים בכל טעינה. אם המצב
+// השתנה ואנחנו במסלול, מציירים אותו מחדש (באמצע יחידה לא מפריעים).
+Progress.refreshCourseOpen().then((changed) => {
+  const hash = location.hash.replace(/^#/, '');
+  if (changed && (hash === '' || hash === 'roadmap')) route();
+});

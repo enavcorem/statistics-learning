@@ -42,8 +42,8 @@ export default {
         type: 'mc',
         prompt: 'בחרי את הנוסחה הנכונה לסטיית תקן:',
         options: [
-          { text: '<span class="ltr">=STDEV.P(A1:A4)</span>', correct: true },
           { text: '<span class="ltr">=VAR.P(A1:A4)</span>', correct: false, hint: 'זו הנוסחה לשונות, לא לסטיית תקן — זכרי: שונות = סטיית תקן בריבוע, הן לא אותו דבר.' },
+          { text: '<span class="ltr">=STDEV.P(A1:A4)</span>', correct: true },
           { text: '<span class="ltr">=AVERAGE(A1:A4)</span>', correct: false, hint: 'זו הנוסחה לממוצע — מדד מרכז, לא מדד פיזור.' },
           { text: '<span class="ltr">=STDEV.P(A1:A5)</span>', correct: false, hint: 'שימי לב לטווח — הנתונים נמצאים ב-A1:A4 בלבד.' },
         ],
