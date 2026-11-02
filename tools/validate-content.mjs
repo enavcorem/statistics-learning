@@ -38,6 +38,7 @@ const EXAM_Q = new Set(QT.exam);
 
 const problems = [];
 let slides = 0;
+const openKeys = new Map(); // key של open-answer → איפה הופיע
 let questions = 0;
 
 function checkQuestion(q, where, isExam) {
@@ -102,6 +103,13 @@ for (const unit of manifest.getFlatUnits()) {
       (s.blocks || []).forEach((b, j) => {
         if (!BLOCKS.has(b.type)) {
           problems.push(`${where} סליידה ${i + 1} בלוק ${j + 1}: סוג לא מוכר — "${b.type}"`);
+        }
+        // open-answer: ה-key הוא מה שנשמר במסד, ולכן חייב להיות ייחודי בכל הלומדה
+        if (b.type === 'open-answer') {
+          if (!b.key) problems.push(`${where} סליידה ${i + 1} בלוק ${j + 1}: open-answer בלי key`);
+          else if (openKeys.has(b.key)) problems.push(`${where} סליידה ${i + 1}: key כפול "${b.key}" (גם ב-${openKeys.get(b.key)})`);
+          else openKeys.set(b.key, where);
+          if (b.kind === 'choice' && !(b.options || []).length) problems.push(`${where} סליידה ${i + 1}: open-answer מסוג choice בלי options`);
         }
       });
       if (s.question) checkQuestion(s.question, `${where} סליידה ${i + 1}`, false);

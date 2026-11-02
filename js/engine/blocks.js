@@ -139,8 +139,19 @@ function renderVideo(block) {
   return wrap;
 }
 
+// שדה כתיבה שנשמר (open: true בלוח המורה). הקוד ב-open-answer.js נטען רק
+// כשיש בלוק כזה בשקף, כדי שלומדות שלא משתמשות בו לא ישתנו בכלום.
+function renderOpenAnswer(block) {
+  const wrap = el('div', 'block oa-answer oa-loading');
+  import('./open-answer.js')
+    .then((m) => m.renderOpenAnswer(block, wrap))
+    .catch((e) => { console.warn('open-answer לא נטען:', e); wrap.textContent = 'השדה לא נטען. רעננו את הדף.'; });
+  return wrap;
+}
+
 const RENDERERS = {
   text: renderText,
+  'open-answer': renderOpenAnswer,
   concept: (b) => renderBox(b, 'concept', b.icon || '💡'),
   example: (b) => renderBox(b, 'example', b.icon || '🔍'),
   trap: (b) => renderBox(b, 'trap', b.icon || '⚠️'),

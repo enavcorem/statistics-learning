@@ -9,6 +9,11 @@ export const COURSES = [
   { id: 'stat', title: 'סטטיסטיקה', icon: '📊', grade: 'י״א', url: 'https://enavcorem.github.io/statistics-learning/' },
   { id: 'xlookup', title: 'XLOOKUP', icon: '🔗', grade: 'י״א', url: 'https://enavcorem.github.io/xlookup-learning/' },
   { id: 'func', title: 'ארגז הכלים — פונקציות', icon: '🧰', grade: 'י״א', url: 'https://enavcorem.github.io/functions-learning/' },
+  // אתר אחד, שלוש לומדות: enavcorem.github.io/excel/<id>/
+  { id: 'percent', title: 'אחוזים', icon: '🧮', grade: 'י״א', url: 'https://enavcorem.github.io/excel/percent/' },
+  { id: 'dates', title: 'תאריכים', icon: '📅', grade: 'י״א', url: 'https://enavcorem.github.io/excel/dates/' },
+  { id: 'pivot', title: 'פיבוט מתקדם', icon: '🥧', grade: 'י״א', url: 'https://enavcorem.github.io/excel/pivot/' },
+  { id: 'parta', title: 'חלק א׳: גרפים ומקורות', icon: '📈', grade: 'י״א', url: 'https://enavcorem.github.io/part-a-learning/' },
   { id: 'client', title: 'הלקוח שלנו (י״ב)', icon: '🤝', grade: 'י״ב', url: 'https://enavcorem.github.io/client-learning/' },
 ];
 
