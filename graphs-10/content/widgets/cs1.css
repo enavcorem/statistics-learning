@@ -1,0 +1,79 @@
+/* ===== עיצוב הגרפים של לומדת "סוגי גרפים" =====
+   כל הצבעים כאן הם טוקנים, מבוססים על טוקני המנוע. */
+
+:root {
+  --cs1-s0: var(--chapter-1);
+  --cs1-s1: var(--chapter-4);
+  --cs1-s2: var(--chapter-2);
+  --cs1-s3: var(--chapter-3);
+  --cs1-hi: var(--color-accent);
+  --cs1-ink: var(--text);
+  --cs1-muted: var(--text-muted);
+  --cs1-grid: var(--border);
+  --cs1-paper: var(--card-bg);
+}
+
+.cs1-chart { display: flex; flex-direction: column; gap: var(--space-2); }
+.cs1-chart svg { display: block; width: 100%; max-width: 600px; height: auto; margin: 0 auto; overflow: visible; }
+.cs1-chart svg text { fill: var(--cs1-ink); font-family: var(--font-body); font-size: 13px; }
+
+.cs1-grid { stroke: var(--cs1-grid); stroke-width: 1; }
+.cs1-axis { stroke: var(--cs1-ink); stroke-width: 1.5; }
+.cs1-chart svg .cs1-tick { fill: var(--cs1-muted); font-size: 12px; }
+.cs1-chart svg .cs1-axis-title { font-weight: 700; font-size: 14px; }
+.cs1-guide { stroke: var(--cs1-hi); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.cs1-chart svg .cs1-val { fill: var(--cs1-hi); font-weight: 700; }
+.cs1-chart svg .cs1-val-ink { fill: var(--cs1-ink); }
+
+.cs1-readout { text-align: center; color: var(--cs1-muted); min-height: 1.6em; font-size: 0.95rem; }
+.cs1-readout b { color: var(--cs1-hi); }
+.cs1-caption { text-align: center; font-size: 0.85rem; color: var(--cs1-muted); }
+
+/* מקלות */
+.cs1-stick { fill: var(--cs1-s0); cursor: pointer; transition: fill var(--duration-fast); }
+.cs1-stick:hover, .cs1-stick.on { fill: var(--cs1-hi); }
+.cs1-stick:focus-visible, .cs1-slice:focus-visible { outline: 3px solid var(--cs1-s0); outline-offset: 2px; }
+
+/* קו */
+.cs1-line { fill: none; stroke: var(--cs1-s0); stroke-width: 3; stroke-linejoin: round; }
+.cs1-dot { fill: var(--cs1-paper); stroke: var(--cs1-s0); stroke-width: 2.5; }
+.cs1-dot.on { fill: var(--cs1-hi); stroke: var(--cs1-hi); }
+.cs1-slider { display: flex; align-items: center; justify-content: center; gap: var(--space-3); flex-wrap: wrap; }
+.cs1-slider input[type=range] { width: min(360px, 100%); accent-color: var(--cs1-s0); }
+
+/* עיגול */
+.cs1-pie-row { display: flex; flex-wrap: wrap; gap: var(--space-4); align-items: center; justify-content: center; }
+.cs1-chart svg.cs1-pie { max-width: 260px; margin: 0; }
+.cs1-slice { cursor: pointer; transition: transform var(--duration-base) var(--ease); }
+.cs1-slice path { stroke: var(--cs1-paper); stroke-width: 2; }
+.cs1-chart svg .cs1-slice-label { fill: var(--cs1-paper); font-weight: 700; pointer-events: none; }
+.cs1-c0 { --cs1-c: var(--cs1-s0); }
+.cs1-c1 { --cs1-c: var(--cs1-s1); }
+.cs1-c2 { --cs1-c: var(--cs1-s2); }
+.cs1-c3 { --cs1-c: var(--cs1-s3); }
+.cs1-slice path, .cs1-bar { fill: var(--cs1-c); }
+
+.cs1-legend { display: flex; flex-direction: column; gap: var(--space-2); }
+.cs1-legend-item {
+  font: inherit; font-size: 0.95rem; display: flex; align-items: center; gap: var(--space-2);
+  border: 1.5px solid var(--border); background: var(--cs1-paper); color: var(--cs1-ink);
+  border-radius: var(--radius-full); padding: 4px 14px; cursor: pointer;
+}
+.cs1-legend-item i { width: 12px; height: 12px; border-radius: 3px; background: var(--cs1-c); display: inline-block; }
+.cs1-legend-item.on { border-color: var(--cs1-ink); }
+
+/* ציר מטעה */
+.cs1-toggle { display: flex; gap: var(--space-2); justify-content: center; flex-wrap: wrap; }
+.cs1-toggle-btn {
+  font: inherit; font-size: 0.95rem; font-weight: 600; cursor: pointer;
+  border: 1.5px solid var(--border); background: var(--cs1-paper); color: var(--cs1-ink);
+  border-radius: var(--radius-sm); padding: 6px 14px;
+}
+.cs1-toggle-btn.on { background: var(--cs1-ink); color: var(--cs1-paper); border-color: var(--cs1-ink); }
+
+/* רשימת בדיקה בסוף יחידה 4 */
+.cs1-check { margin: 0; padding-inline-start: 1.4em; display: flex; flex-direction: column; gap: 6px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cs1-slice, .cs1-stick { transition: none; }
+}
