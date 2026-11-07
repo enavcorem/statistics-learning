@@ -541,7 +541,7 @@ function openModal(id){
   var meta=$('mMeta');meta.innerHTML='';
   function row(html){var d=document.createElement('div');d.innerHTML=html;meta.appendChild(d)}
   if(isB){row('לא חובה. למי שפתח את כל ארבעת המנעולים לפני הזמן.');row('📁 בקובץ האקסל: הגיליון <b>בונוס - הכי צעיר</b>')}
-  else{row('⏱ '+g.mins+' דקות לשער הזה. <b>עד דקה '+g.until+' בשעה.</b>');row('📁 בקובץ האקסל: הגיליון <b>'+g.sheet+'</b>')}
+  else{row('📁 בקובץ האקסל: הגיליון <b>'+g.sheet+'</b>')}
   var q=$('mQ');q.innerHTML='';var qb=document.createElement('b');qb.textContent='❓ ';q.appendChild(qb);q.appendChild(document.createTextNode(isB?BONUS.q:g.q));
   $('mLabel').textContent=isB?'הקוד שמצאנו (מספר המבקר)':'הקוד שמצאנו';
   var inp=$('code');inp.value='';inp.disabled=solved;inp.placeholder=(!isB&&g.n===4)?'• • • •':'• • •';
