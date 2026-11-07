@@ -1,0 +1,636 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ננעלנו בלונה פארק</title>
+<meta name="description" content="חדר בריחה בלונה פארק: ארבעה מתקנים, ארבעה מנעולים, ארבעה קודים.">
+<style>
+/* מבנה: כותרת עם התקדמות, מפת לונה פארק בלילה (SVG מאוזן לאורך, טוב לטלפון), חלון שלט ומנעול, מסך פתיחה, מסך סיום.
+   מראה אחד בכוונה: לילה. הצבעים כולם בטוקנים. */
+:root{
+  --night:#0b0d27;      /* שמי לילה */
+  --night2:#171a47;     /* פאנלים */
+  --plum:#2b1a55;      /* אופק סגול */
+  --ink:#f4f1ff;       /* טקסט */
+  --muted:#b3b0da;     /* טקסט משני */
+  --lamp:#ffc83d;      /* נורות, כפתור ראשי */
+  --pink:#ff4f8b;      /* רכבת ההרים, אזהרה רכה */
+  --teal:#2fe3c1;      /* הצלחה, הבא בתור */
+  --lock:#6b6e8f;      /* נעול */
+  --ok:#5be28c;
+  --bad:#ff8798;
+  --board:#f6ecd0;     /* לוח השלט */
+  --boardink:#2a1a12;
+  --boardred:#b3261e;
+  --font:"Segoe UI","Arial Hebrew","Noto Sans Hebrew","Heebo",Arial,system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{
+  background:var(--night);color:var(--ink);font-family:var(--font);font-size:17px;line-height:1.5;
+  padding-block:0;padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px));
+  -webkit-text-size-adjust:100%;
+}
+[hidden]{display:none!important}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--lamp);outline-offset:2px}
+html.lock-scroll,html.lock-scroll body{overflow:hidden}
+.boot *{transition:none!important}
+
+/* כותרת */
+.top{max-width:640px;margin:0 auto;padding:10px 0 4px;display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.brand{display:flex;align-items:center;gap:8px;font-weight:800;font-size:1.15rem;margin:0;flex:1 1 auto;min-width:0}
+.brand svg{flex:none}
+.acts{display:flex;gap:6px}
+.btn-s{background:var(--night2);border:1px solid #3a3e7a;border-radius:999px;padding:5px 12px;font-size:.9rem;min-height:36px}
+.btn-s:hover{border-color:var(--lamp)}
+.steps{list-style:none;display:grid;grid-template-columns:repeat(4,1fr) 1.7fr;gap:8px;margin:0;padding:0;flex:1 1 100%;align-items:center}
+.chip{min-width:0;text-align:center;border-radius:12px;padding:3px 4px;font-weight:700;font-size:.92rem;background:var(--night2);border:2px solid #31356f;color:var(--muted);white-space:nowrap}
+.chip.current{border-color:var(--lamp);color:var(--lamp);box-shadow:0 0 12px rgba(255,200,61,.45)}
+.chip.done{background:#103a2f;border-color:var(--ok);color:var(--ok)}
+
+/* מפה */
+main{max-width:640px;margin:0 auto}
+.mapwrap{position:relative;display:flex;justify-content:center}
+#map{display:block;width:min(100%,calc((100vh - 150px) * 520 / 660));width:min(100%,calc((100dvh - 150px) * 520 / 660));min-width:min(100%,300px);height:auto;border-radius:18px;touch-action:manipulation}
+.ride{cursor:pointer}
+.hit{fill:rgba(0,0,0,0);stroke:none}
+.ride:focus-visible,.exit:focus-visible,.bonus:focus-visible{outline:none}
+.ride:focus-visible .hit,.exit:focus-visible .hit,.bonus:focus-visible .hit{stroke:var(--lamp);stroke-width:3;stroke-dasharray:7 5}
+.ride .label rect{fill:#1b1f55;stroke:#4a4f9a;stroke-width:2}
+.ride .label text{fill:var(--ink);font-weight:800;font-size:22px}
+.ride .badge circle{fill:#2a2e6a;stroke:#6a6fc0;stroke-width:2}
+.ride .badge text{fill:var(--ink);font-weight:800;font-size:19px;text-anchor:middle;dominant-baseline:central}
+.ride .halo,.ride .arrow,.ride .okmark,.ride .padlock{display:none}
+.ride.locked .padlock{display:block}
+.ride.locked .label rect{fill:#222540;stroke:#3c405f}
+.ride.locked .label text{fill:#8e91b4}
+.ride.locked .badge circle{fill:#222540;stroke:#3c405f}
+.ride.locked .badge text{fill:#8e91b4}
+.ride.current .halo,.ride.current .arrow{display:block}
+.ride.current .label rect{fill:#4a3a00;stroke:var(--lamp)}
+.ride.current .badge circle{fill:var(--lamp);stroke:#fff3c4}
+.ride.current .badge text{fill:#3a2600}
+.ride.done .okmark{display:block}
+.ride.done .label rect{fill:#0f3a2c;stroke:var(--ok)}
+.ride.done .badge circle{fill:var(--ok);stroke:#c8ffd9}
+.ride.done .badge text{fill:#063018}
+.halo{animation:pulse 1.8s ease-in-out infinite;transform-origin:0 0}
+.arrow{animation:bob 1s ease-in-out infinite}
+.ride.locked .art{opacity:.95}
+.ride.locked .win,.ride.locked .bulb{fill:#2a2c48!important}
+.ride.locked .spin,.ride.locked .counter{animation-play-state:paused}
+.spin{animation:spin 30s linear infinite;transform-origin:0 0}
+.counter{animation:spin 30s linear infinite reverse;transform-origin:0 0}
+.bulb{animation:blink 1.6s ease-in-out infinite}
+.win{animation:flicker 3.2s steps(1) infinite}
+.ghost{animation:float 3.4s ease-in-out infinite}
+.star{animation:twinkle 3s ease-in-out infinite}
+.lamp-g{animation:blink 2.4s ease-in-out infinite}
+.seg{fill:none;stroke:#2a2f6e;stroke-width:24;stroke-linecap:round}
+.segline{fill:none;stroke:#3d4390;stroke-width:3;stroke-dasharray:2 11;stroke-linecap:round}
+.seglit{fill:none;stroke:var(--lamp);stroke-width:5;stroke-linecap:round;stroke-dasharray:5 11;opacity:0;transition:opacity .8s}
+.seglit.on{opacity:1}
+.exit .door{transition:transform .9s ease-in-out}
+.exit .dl{transform-origin:-44px 0}
+.exit .dr{transform-origin:44px 0}
+.exit.open .door{transform:scaleX(.12)}
+.exit .chains{transition:opacity .5s}
+.exit.open .chains{opacity:0}
+.exit .eg{fill:var(--bad)}
+.exit.open .eg{fill:var(--ok)}
+.bonus{cursor:pointer;animation:float 3s ease-in-out infinite}
+.bonus.off{display:none}
+.bonus.got .bstar{fill:#fff3b0}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:.55;transform:scale(.92)}50%{opacity:1;transform:scale(1.06)}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(7px)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes flicker{0%{opacity:1}35%{opacity:.55}38%{opacity:1}72%{opacity:.7}76%{opacity:1}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@keyframes twinkle{0%,100%{opacity:.9}50%{opacity:.2}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+
+/* חלונות */
+.overlay{position:fixed;inset:0;z-index:30;display:flex;align-items:flex-start;justify-content:center;background:rgba(6,7,26,.88);overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding-block:max(14px,env(safe-area-inset-top,0px)) max(14px,env(safe-area-inset-bottom,0px));padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px))}
+.card{position:relative;width:100%;max-width:480px;margin:auto;background:var(--night2);border:2px solid #3a3e7a;border-radius:22px;padding:20px 18px 18px;box-shadow:0 18px 60px rgba(0,0,0,.6)}
+.card h2{margin:0 0 8px;font-size:1.5rem;line-height:1.2;text-wrap:balance}
+.card p{margin:0 0 10px}
+.x{position:absolute;top:10px;inset-inline-start:10px;width:40px;height:40px;border-radius:50%;border:1px solid #3a3e7a;background:var(--night);font-size:1.4rem;line-height:1;display:grid;place-items:center;z-index:2}
+.btn{display:block;width:100%;background:var(--lamp);color:#3a2600;border:0;border-radius:14px;padding:12px 16px;font-weight:800;font-size:1.1rem;min-height:48px;box-shadow:0 4px 0 #a97a00}
+.btn:active{transform:translateY(2px);box-shadow:0 2px 0 #a97a00}
+.btn.alt{background:var(--night);color:var(--ink);border:2px solid #4a4f9a;box-shadow:none}
+
+/* מסך פתיחה */
+.intro .moon{display:block;margin:0 auto 4px}
+.intro h2{text-align:center;font-size:1.7rem}
+.story{background:#10133a;border-radius:14px;padding:12px 14px;margin:0 0 12px}
+.story p{margin:0 0 6px}.story p:last-child{margin:0;font-weight:800;color:var(--lamp)}
+.how{list-style:none;margin:0 0 12px;padding:0;display:grid;gap:6px;counter-reset:s}
+.how li{counter-increment:s;display:flex;gap:10px;align-items:flex-start}
+.how li::before{content:counter(s);flex:none;width:26px;height:26px;border-radius:50%;background:var(--teal);color:#06352c;font-weight:800;display:grid;place-items:center;font-size:.9rem;margin-top:1px}
+.rule3{border:2px dashed var(--lamp);border-radius:16px;padding:12px;margin:0 0 14px;background:rgba(255,200,61,.07)}
+.rule3 h3{margin:0 0 8px;font-size:1.1rem;display:flex;align-items:center;gap:8px}
+.rule3 .clock{flex:none;width:34px;height:34px;border-radius:50%;background:var(--lamp);color:#3a2600;display:grid;place-items:center;font-weight:900;font-size:1.1rem}
+.tiers{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:0;padding:0;list-style:none}
+.tiers li{background:var(--night);border-radius:12px;padding:8px 6px;text-align:center;font-size:.95rem;line-height:1.3}
+.tiers b{display:block;font-size:1.05rem}
+.tiers .gr{color:#c2c4d6}
+.fine{font-size:.82rem;color:var(--muted);text-align:center;margin:12px 0 0}
+
+/* שלט ומנעול */
+.sign{position:relative;margin:30px 6px 10px;padding-top:14px}
+.sign::before,.sign::after{content:"";position:absolute;top:-22px;width:6px;height:44px;background:repeating-linear-gradient(#9da2cf 0 6px,#59608f 6px 10px);border-radius:3px}
+.sign::before{right:18%}.sign::after{left:18%}
+.plate{position:relative;z-index:1;margin:0 auto -10px;width:max-content;max-width:92%;background:linear-gradient(#ffd75e,#f0a91e);color:#3a2000;font-weight:900;font-size:1.15rem;padding:5px 18px 6px;border-radius:12px;border:3px solid #7a4d00;box-shadow:0 0 0 3px #3a2000;text-align:center}
+.board{background:var(--board);color:var(--boardink);border:6px solid var(--boardred);border-radius:16px;padding:22px 14px 14px;box-shadow:inset 0 0 0 3px var(--board),inset 0 0 0 5px #8a7a55,0 8px 0 rgba(0,0,0,.35);position:relative}
+.board::before,.board::after{content:"";position:absolute;top:8px;width:9px;height:9px;border-radius:50%;background:#8a7a55}
+.board::before{right:9px}.board::after{left:9px}
+.sline{font-weight:800;font-size:clamp(1.3rem,6vw,1.75rem);line-height:1.25;text-align:center;padding:8px 4px;text-wrap:balance}
+.sline+.sline{border-top:3px dashed #8a7a55}
+.board.lead .sline:first-child{font-size:clamp(1.6rem,7.4vw,2.2rem);color:var(--boardred)}
+.board.lead .sline:not(:first-child){font-size:clamp(1.15rem,5vw,1.45rem)}
+.meta{display:grid;gap:4px;margin:12px 0 4px;font-size:.95rem;color:var(--muted)}
+.meta b{color:var(--ink)}
+.q{background:#10133a;border-radius:14px;padding:10px 12px;margin:10px 0}
+.q b{color:var(--teal)}
+.lockrow{display:flex;gap:14px;align-items:flex-end;margin-top:8px}
+.padl{flex:none;width:58px;height:64px}
+.padl .shackle{transition:transform .5s;transform-origin:32px 32px}
+.padl .body{fill:var(--lamp);transition:fill .4s}
+.is-open .padl .shackle{transform:translateY(-10px) rotate(-14deg)}
+.is-open .padl .body{fill:var(--ok)}
+.shake .padl{animation:shake .5s}
+.form{flex:1;min-width:0;display:grid;gap:8px}
+.form label{font-weight:700}
+#code{width:100%;font:inherit;font-size:1.7rem;font-weight:800;letter-spacing:.2em;text-align:center;direction:ltr;background:var(--night);color:var(--ink);border:3px solid #4a4f9a;border-radius:14px;padding:6px 10px;min-height:56px}
+#code:focus{border-color:var(--lamp);outline:none;box-shadow:0 0 0 3px rgba(255,200,61,.35)}
+#code[disabled]{opacity:.7;border-color:var(--ok)}
+.msg{min-height:1.6em;margin:10px 0 0;font-weight:700}
+.msg.bad{color:var(--bad)}.msg.good{color:var(--ok)}
+details.help{margin-top:10px;background:#10133a;border-radius:14px;padding:8px 12px}
+details.help summary{cursor:pointer;font-weight:700;min-height:32px;display:flex;align-items:center}
+details.help ol{margin:6px 0 4px;padding-inline-start:22px}
+.toast{position:fixed;inset-inline:0;bottom:max(18px,env(safe-area-inset-bottom,0px));z-index:50;display:flex;justify-content:center;pointer-events:none}
+.toast span{background:#1b1f55;border:2px solid var(--lamp);border-radius:14px;padding:8px 16px;font-weight:700;max-width:90%;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.5);opacity:0;transform:translateY(10px);transition:all .25s}
+.toast.show span{opacity:1;transform:none}
+
+/* סיום */
+#finish{background:radial-gradient(ellipse at 50% 30%,#1d1a5e,#070820 70%);overflow:hidden}
+#fw{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+#finish .card{background:rgba(23,26,71,.82);backdrop-filter:blur(4px);text-align:center;z-index:1}
+#finish h2{font-size:2.6rem;color:var(--lamp);margin-bottom:4px}
+.fine-time{font-weight:800;color:var(--teal);font-size:1.2rem;margin:4px 0 12px}
+.row{display:grid;gap:10px;margin-top:12px}
+
+@media (min-width:560px){.row.two{grid-template-columns:1fr 1fr}}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <h1 class="brand">
+    <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><path d="M22 4a13 13 0 1 0 6 22 11 11 0 0 1-6-22z" fill="#ffc83d"/></svg>
+    ננעלנו בלונה פארק
+  </h1>
+  <div class="acts">
+    <button type="button" class="btn-s" id="btnHelp" aria-label="הסבר: הסיפור וכלל 3 הדקות">❔ הסבר</button>
+    <button type="button" class="btn-s" id="btnReset">🔄 מחדש</button>
+  </div>
+  <ol class="steps" id="steps" aria-label="התקדמות"></ol>
+</header>
+
+<main>
+<div class="mapwrap">
+<svg id="map" viewBox="0 0 520 660" role="group" aria-label="מפת לונה פארק בלילה">
+  <defs>
+    <linearGradient id="gSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0b0d27"/><stop offset=".55" stop-color="#241a58"/><stop offset="1" stop-color="#4a2a70"/></linearGradient>
+    <linearGradient id="gGround" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1f2160"/><stop offset="1" stop-color="#101240"/></linearGradient>
+    <radialGradient id="gHalo"><stop offset="0" stop-color="#ffc83d" stop-opacity=".75"/><stop offset=".6" stop-color="#ffc83d" stop-opacity=".22"/><stop offset="1" stop-color="#ffc83d" stop-opacity="0"/></radialGradient>
+    <filter id="fGrey" x="-5%" y="-5%" width="110%" height="110%"><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncR type="linear" slope=".55"/><feFuncG type="linear" slope=".55"/><feFuncB type="linear" slope=".55"/></feComponentTransfer></filter>
+    <symbol id="padlockSym" viewBox="0 0 64 72"><path d="M20 32V22a12 12 0 0 1 24 0v10" fill="none" stroke="#d7d9f5" stroke-width="6" stroke-linecap="round"/><rect x="10" y="30" width="44" height="36" rx="9" fill="#9da1c9" stroke="#2a2d55" stroke-width="3"/><circle cx="32" cy="46" r="5" fill="#2a2d55"/><rect x="30" y="48" width="4" height="10" rx="2" fill="#2a2d55"/></symbol>
+  </defs>
+
+  <!-- שמיים, ירח, כוכבים, אופק -->
+  <rect width="520" height="660" fill="url(#gSky)"/>
+  <g id="stars"></g>
+  <circle cx="440" cy="58" r="26" fill="#fff3c4"/><circle cx="450" cy="50" r="23" fill="#2a1d62" opacity=".0"/>
+  <path d="M0 150 L30 128 L52 140 L82 112 L110 138 L150 120 L190 142 L230 118 L262 140 L300 122 L338 144 L372 124 L410 142 L452 118 L486 138 L520 126 V230 H0Z" fill="#171648"/>
+  <rect y="175" width="520" height="485" fill="url(#gGround)"/>
+  <path d="M0 175 Q130 160 260 175 T520 175" fill="none" stroke="#2c3085" stroke-width="3"/>
+  <!-- שרשרת נורות -->
+  <path d="M0 22 Q130 66 260 24 T520 22" fill="none" stroke="#3a3e7a" stroke-width="2"/>
+  <g id="strings"></g>
+
+  <!-- שביל -->
+  <g id="roads">
+    <path class="seg" d="M140 205 C200 250 300 200 385 245"/>
+    <path class="seg" d="M385 245 C410 320 250 300 135 405"/>
+    <path class="seg" d="M135 405 C190 470 300 395 390 450"/>
+    <path class="seg" d="M390 450 C405 520 300 500 262 555"/>
+    <path class="segline" d="M140 205 C200 250 300 200 385 245"/>
+    <path class="segline" d="M385 245 C410 320 250 300 135 405"/>
+    <path class="segline" d="M135 405 C190 470 300 395 390 450"/>
+    <path class="segline" d="M390 450 C405 520 300 500 262 555"/>
+    <path class="seglit" id="lit1" d="M140 205 C200 250 300 200 385 245"/>
+    <path class="seglit" id="lit2" d="M385 245 C410 320 250 300 135 405"/>
+    <path class="seglit" id="lit3" d="M135 405 C190 470 300 395 390 450"/>
+    <path class="seglit" id="lit4" d="M390 450 C405 520 300 500 262 555"/>
+  </g>
+
+  <!-- שער 1: רכבת ההרים -->
+  <g class="ride locked" id="ride1" data-gate="1" transform="translate(140 150) scale(.86)" role="button" tabindex="0">
+    <ellipse class="halo" cx="0" cy="0" rx="130" ry="115" fill="url(#gHalo)"/>
+    <g class="art">
+      <ellipse cx="0" cy="62" rx="92" ry="12" fill="#0a0b2a"/>
+      <g id="supports1" stroke="#7f84c0" stroke-width="3"></g>
+      <rect x="-96" y="40" width="34" height="22" rx="4" fill="#4b3a8f"/><rect x="-90" y="46" width="8" height="10" fill="#ffd24a" class="win"/><rect x="-76" y="46" width="8" height="10" fill="#ffd24a" class="win"/>
+      <path id="track1" d="M-78 40 C-60 40 -58 -50 -38 -50 C-18 -50 -16 16 4 16 C24 16 22 -64 46 -64 C66 -64 58 40 84 40" fill="none" stroke="#ff4f8b" stroke-width="8" stroke-linecap="round"/>
+      <path d="M-78 40 C-60 40 -58 -50 -38 -50 C-18 -50 -16 16 4 16 C24 16 22 -64 46 -64 C66 -64 58 40 84 40" fill="none" stroke="#ffd0e0" stroke-width="2" stroke-dasharray="2 7" stroke-linecap="round"/>
+      <line x1="46" y1="-64" x2="46" y2="-86" stroke="#d7d9f5" stroke-width="3"/><path d="M46 -86 L68 -80 L46 -73Z" fill="#ffc83d"/>
+      <g id="car1"><rect x="-13" y="-17" width="26" height="12" rx="5" fill="#2fe3c1" stroke="#06352c" stroke-width="2"/><circle cx="-5" cy="-21" r="4" fill="#ffd0a0"/><circle cx="5" cy="-21" r="4" fill="#ffb0c8"/><circle cx="-7" cy="-3" r="3" fill="#06352c"/><circle cx="7" cy="-3" r="3" fill="#06352c"/></g>
+    </g>
+    <g class="padlock" transform="translate(-22 -34)"><use href="#padlockSym" width="44" height="50"/></g>
+    <g class="okmark" transform="translate(70 -62)"><circle r="16" fill="#5be28c" stroke="#fff" stroke-width="3"/><path d="M-7 0 L-2 6 L8 -6" fill="none" stroke="#063018" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></g>
+    <g transform="translate(0 -112)"><g class="arrow"><path d="M-14 -6 L14 -6 L0 14Z" fill="#ffc83d" stroke="#3a2600" stroke-width="2" stroke-linejoin="round"/></g></g>
+    <g class="label" transform="translate(0 92) scale(1.16)"></g>
+    <rect class="hit" x="-100" y="-110" width="200" height="225"/>
+  </g>
+
+  <!-- שער 2: הקופה -->
+  <g class="ride locked" id="ride2" data-gate="2" transform="translate(385 195) scale(.86)" role="button" tabindex="0">
+    <ellipse class="halo" cx="0" cy="0" rx="115" ry="105" fill="url(#gHalo)"/>
+    <g class="art">
+      <ellipse cx="0" cy="58" rx="86" ry="11" fill="#0a0b2a"/>
+      <rect x="-56" y="-28" width="112" height="86" rx="7" fill="#6b3fa0" stroke="#2b1a55" stroke-width="3"/>
+      <rect x="-40" y="-8" width="80" height="38" rx="5" fill="#ffd98a" class="win"/>
+      <circle cx="0" cy="6" r="8" fill="#a8613a"/><path d="M-14 30 Q0 8 14 30Z" fill="#e8467c"/>
+      <rect x="-48" y="28" width="96" height="9" rx="3" fill="#e8a33d" stroke="#7a4d00" stroke-width="2"/>
+      <g id="awning"></g>
+      <rect x="-48" y="-82" width="96" height="26" rx="6" fill="#ffc83d" stroke="#7a4d00" stroke-width="3"/>
+      <text x="0" y="-63" text-anchor="middle" font-size="17" font-weight="900" fill="#3a2000">כרטיסים</text>
+      <rect x="-80" y="-30" width="5" height="88" fill="#59608f"/><circle cx="-77.5" cy="-34" r="7" fill="#ffe08a" class="bulb"/>
+      <rect x="75" y="-30" width="5" height="88" fill="#59608f"/><circle cx="77.5" cy="-34" r="7" fill="#ffe08a" class="bulb"/>
+      <g transform="translate(-70 55) rotate(-8)"><rect x="-17" y="-8" width="34" height="16" rx="3" fill="#2fe3c1"/><circle cx="-17" cy="0" r="3.5" fill="#0b0d27"/><circle cx="17" cy="0" r="3.5" fill="#0b0d27"/></g>
+    </g>
+    <g class="padlock" transform="translate(-22 -22)"><use href="#padlockSym" width="44" height="50"/></g>
+    <g class="okmark" transform="translate(64 -70)"><circle r="16" fill="#5be28c" stroke="#fff" stroke-width="3"/><path d="M-7 0 L-2 6 L8 -6" fill="none" stroke="#063018" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></g>
+    <g transform="translate(0 -112)"><g class="arrow"><path d="M-14 -6 L14 -6 L0 14Z" fill="#ffc83d" stroke="#3a2600" stroke-width="2" stroke-linejoin="round"/></g></g>
+    <g class="label" transform="translate(0 84) scale(1.16)"></g>
+    <rect class="hit" x="-95" y="-110" width="190" height="210"/>
+  </g>
+
+  <!-- שער 3: בית הרוחות -->
+  <g class="ride locked" id="ride3" data-gate="3" transform="translate(135 355) scale(.86)" role="button" tabindex="0">
+    <ellipse class="halo" cx="0" cy="0" rx="125" ry="115" fill="url(#gHalo)"/>
+    <g class="art">
+      <ellipse cx="0" cy="58" rx="92" ry="11" fill="#0a0b2a"/>
+      <rect x="-78" y="-56" width="34" height="114" fill="#3a2f6b"/><path d="M-84 -56 L-61 -102 L-38 -56Z" fill="#1b1535"/>
+      <rect x="44" y="-30" width="32" height="88" fill="#3a2f6b"/><path d="M38 -30 L60 -68 L82 -30Z" fill="#1b1535"/>
+      <rect x="-48" y="-38" width="96" height="96" fill="#4a3a85"/><path d="M-58 -38 L0 -88 L58 -38Z" fill="#1b1535"/>
+      <path d="M-68 -34 v-9 a7 7 0 0 1 14 0 v9z" fill="#ffd24a" class="win"/>
+      <path d="M-34 -14 v-12 a8 8 0 0 1 16 0 v12z" fill="#ffd24a" class="win"/>
+      <path d="M18 -14 v-12 a8 8 0 0 1 16 0 v12z" fill="#ffd24a" class="win" style="animation-delay:-1.4s"/>
+      <path d="M53 -2 v-9 a7 7 0 0 1 14 0 v9z" fill="#ffd24a" class="win" style="animation-delay:-.7s"/>
+      <path d="M-13 58 V30 a13 13 0 0 1 26 0 V58Z" fill="#100d28"/><path d="M0 22 V58" stroke="#ffb347" stroke-width="2" opacity=".7"/>
+      <g class="ghost"><path d="M64 -86 a15 15 0 0 1 30 0 v26 l-6 -6 l-5 6 l-4 -6 l-5 6 l-5 -6 l-5 6Z" fill="#e8f4ff" opacity=".95"/><circle cx="74" cy="-90" r="2.6" fill="#0b0d27"/><circle cx="84" cy="-90" r="2.6" fill="#0b0d27"/><ellipse cx="79" cy="-80" rx="3" ry="4" fill="#0b0d27"/></g>
+      <path d="M-30 -80 q6 -8 12 0 q6 -8 12 0 q-6 3 -12 2 q-6 1 -12 -2Z" fill="#0b0d27"/>
+      <path d="M-84 -112 q5 -7 10 0 q5 -7 10 0 q-5 3 -10 2 q-5 1 -10 -2Z" fill="#0b0d27"/>
+      <g fill="#59608f"><rect x="-96" y="40" width="5" height="18"/><rect x="-88" y="42" width="5" height="16"/><rect x="80" y="42" width="5" height="16"/><rect x="88" y="40" width="5" height="18"/></g>
+    </g>
+    <g class="padlock" transform="translate(-22 -26)"><use href="#padlockSym" width="44" height="50"/></g>
+    <g class="okmark" transform="translate(72 -76)"><circle r="16" fill="#5be28c" stroke="#fff" stroke-width="3"/><path d="M-7 0 L-2 6 L8 -6" fill="none" stroke="#063018" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></g>
+    <g transform="translate(0 -128)"><g class="arrow"><path d="M-14 -6 L14 -6 L0 14Z" fill="#ffc83d" stroke="#3a2600" stroke-width="2" stroke-linejoin="round"/></g></g>
+    <g class="label" transform="translate(0 84) scale(1.16)"></g>
+    <rect class="hit" x="-100" y="-118" width="200" height="218"/>
+  </g>
+
+  <!-- שער 4: הגלגל הענק -->
+  <g class="ride locked" id="ride4" data-gate="4" transform="translate(390 400) scale(.86)" role="button" tabindex="0">
+    <ellipse class="halo" cx="0" cy="-10" rx="125" ry="120" fill="url(#gHalo)"/>
+    <g class="art">
+      <ellipse cx="0" cy="58" rx="80" ry="11" fill="#0a0b2a"/>
+      <path d="M-38 58 L0 -30 L38 58" fill="none" stroke="#8a8fc9" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+      <path d="M-24 28 H24" stroke="#8a8fc9" stroke-width="4"/>
+      <g transform="translate(0 -30)"><g class="spin" id="wheel"></g></g>
+      <circle cx="0" cy="-30" r="8" fill="#ffc83d" stroke="#7a4d00" stroke-width="2"/>
+    </g>
+    <g class="padlock" transform="translate(-22 -56)"><use href="#padlockSym" width="44" height="50"/></g>
+    <g class="okmark" transform="translate(64 -86)"><circle r="16" fill="#5be28c" stroke="#fff" stroke-width="3"/><path d="M-7 0 L-2 6 L8 -6" fill="none" stroke="#063018" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></g>
+    <g transform="translate(0 -122)"><g class="arrow"><path d="M-14 -6 L14 -6 L0 14Z" fill="#ffc83d" stroke="#3a2600" stroke-width="2" stroke-linejoin="round"/></g></g>
+    <g class="label" transform="translate(0 84) scale(1.16)"></g>
+    <rect class="hit" x="-95" y="-112" width="190" height="205"/>
+  </g>
+
+  <!-- שער היציאה -->
+  <g class="exit" id="exit" transform="translate(262 598)" role="button" tabindex="0" aria-label="שער היציאה">
+    <ellipse cx="0" cy="56" rx="88" ry="9" fill="#0a0b2a"/>
+    <g class="door dl"><rect x="-44" y="-36" width="44" height="90" fill="#232763" stroke="#8a8fc9" stroke-width="3"/><path d="M-33 -36 V54 M-22 -36 V54 M-11 -36 V54" stroke="#8a8fc9" stroke-width="3"/></g>
+    <g class="door dr"><rect x="0" y="-36" width="44" height="90" fill="#232763" stroke="#8a8fc9" stroke-width="3"/><path d="M11 -36 V54 M22 -36 V54 M33 -36 V54" stroke="#8a8fc9" stroke-width="3"/></g>
+    <rect x="-74" y="-52" width="26" height="108" rx="4" fill="#4b4f8c" stroke="#2a2d55" stroke-width="3"/>
+    <rect x="48" y="-52" width="26" height="108" rx="4" fill="#4b4f8c" stroke="#2a2d55" stroke-width="3"/>
+    <circle class="eg lamp-g" cx="-61" cy="-62" r="9"/><circle class="eg lamp-g" cx="61" cy="-62" r="9"/>
+    <rect x="-52" y="-84" width="104" height="30" rx="8" fill="#ffc83d" stroke="#7a4d00" stroke-width="3"/>
+    <text x="0" y="-63" text-anchor="middle" font-size="21" font-weight="900" fill="#3a2000">יציאה</text>
+    <g class="chains"><path d="M-46 -6 Q0 22 46 -6" fill="none" stroke="#c9ccee" stroke-width="5" stroke-dasharray="7 3"/><path d="M-46 14 Q0 42 46 14" fill="none" stroke="#c9ccee" stroke-width="5" stroke-dasharray="7 3"/><g transform="translate(-18 4)"><use href="#padlockSym" width="36" height="41"/></g></g>
+    <rect class="hit" x="-82" y="-96" width="164" height="160"/>
+  </g>
+
+  <!-- בלון בונוס -->
+  <g transform="translate(262 330)"><g class="bonus off" id="bonus" role="button" tabindex="0" aria-label="בונוס, לא חובה">
+    <line x1="0" y1="22" x2="0" y2="60" stroke="#d7d9f5" stroke-width="2"/>
+    <path class="bstar" fill="#ffc83d" stroke="#7a4d00" stroke-width="3" stroke-linejoin="round" d="M0 -26 L8 -8 L28 -6 L13 7 L18 27 L0 16 L-18 27 L-13 7 L-28 -6 L-8 -8Z"/>
+    <text x="0" y="82" text-anchor="middle" font-size="17" font-weight="800" fill="#fff3c4">⭐ בונוס</text>
+    <circle class="hit" r="44" cy="0"/>
+  </g></g>
+</svg>
+</div>
+</main>
+
+<!-- מסך פתיחה -->
+<div class="overlay intro" id="intro" role="dialog" aria-modal="true" aria-labelledby="introT">
+  <div class="card">
+    <svg class="moon" width="54" height="54" viewBox="0 0 32 32" aria-hidden="true"><path d="M22 4a13 13 0 1 0 6 22 11 11 0 0 1-6-22z" fill="#ffc83d"/></svg>
+    <h2 id="introT">ננעלנו בלונה פארק!</h2>
+    <div class="story">
+      <p>הפארק נסגר, ואתם נשארתם בפנים. השער הראשי ננעל.</p>
+      <p>שומר הלילה השאיר ביומן המבקרים את כל מי שנכנס היום.</p>
+      <p>כל מתקן נעול בקוד. הקוד מסתתר ביומן.</p>
+      <p>ארבעה קודים פותחים את השער. מי שמסיים ראשון יוצא ראשון!</p>
+    </div>
+    <ol class="how">
+      <li>לוחצים על המתקן המואר במפה. רואים את השלט שלו ואת המנעול.</li>
+      <li>בקובץ האקסל יש גיליון לכל מתקן. בו העבודה.</li>
+      <li>מוצאים את הקוד, ומקלידים אותו כאן במנעול.</li>
+      <li>הקוד נכון? המתקן הבא נדלק.</li>
+    </ol>
+    <div class="rule3">
+      <h3><span class="clock" aria-hidden="true">3</span> כלל 3 הדקות</h3>
+      <p style="margin-bottom:8px">תקועים יותר מ-3 דקות? מתקדמים בסדר הזה:</p>
+      <ol class="tiers">
+        <li><b>1. רמז אפור</b><span class="gr">בתחתית הגיליון</span></li>
+        <li><b>2. חבר</b>שואלים בשקט</li>
+        <li><b>3. מורה</b>רק אחר כך</li>
+      </ol>
+    </div>
+    <button type="button" class="btn" id="btnStart">נכנסים לפארק</button>
+    <p class="fine">הפארק, הקודים והמבקרים בדיוניים. הם נבנו בשביל החדר הזה.</p>
+  </div>
+</div>
+
+<!-- חלון השלט והמנעול -->
+<div class="overlay" id="modal" hidden role="dialog" aria-modal="true" aria-labelledby="mTitle">
+  <div class="card" id="mCard">
+    <button type="button" class="x" id="mClose" aria-label="סגירה">×</button>
+    <div class="sign">
+      <div class="plate" id="mTitle"></div>
+      <div class="board" id="mBoard"></div>
+    </div>
+    <div class="meta" id="mMeta"></div>
+    <div class="q" id="mQ"></div>
+    <div class="lockrow">
+      <svg class="padl" viewBox="0 0 64 72" aria-hidden="true"><path class="shackle" d="M20 34V22a12 12 0 0 1 24 0v12" fill="none" stroke="#d7d9f5" stroke-width="6" stroke-linecap="round"/><rect class="body" x="10" y="32" width="44" height="36" rx="9" stroke="#2a2d55" stroke-width="3"/><circle cx="32" cy="48" r="5" fill="#2a2d55"/><rect x="30" y="50" width="4" height="10" rx="2" fill="#2a2d55"/></svg>
+      <form class="form" id="mForm" autocomplete="off" novalidate>
+        <label for="code" id="mLabel">הקוד שמצאנו</label>
+        <input id="code" name="code" type="text" inputmode="numeric" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" maxlength="12" dir="ltr" placeholder="• • •">
+        <button type="submit" class="btn" id="mGo">לפתוח את המנעול</button>
+      </form>
+    </div>
+    <p class="msg" id="mMsg" role="status" aria-live="polite"></p>
+    <details class="help" id="mHelp">
+      <summary>❔ תקועים? כלל 3 הדקות</summary>
+      <ol><li>קודם הרמז האפור, בתחתית הגיליון.</li><li>אחר כך חבר.</li><li>ורק אחר כך המורה.</li></ol>
+    </details>
+    <div class="row" id="mAfter" hidden><button type="button" class="btn" id="mBack">למפה, למתקן הבא</button></div>
+  </div>
+</div>
+
+<!-- סיום -->
+<div class="overlay" id="finish" hidden role="dialog" aria-modal="true" aria-labelledby="fTitle">
+  <canvas id="fw" aria-hidden="true"></canvas>
+  <div class="card">
+    <h2 id="fTitle">יצאתם!</h2>
+    <p>פתחתם את כל ארבעת המנעולים. השער הראשי נפתח.</p>
+    <p class="fine-time" id="fTime"></p>
+    <div class="row two">
+      <button type="button" class="btn" id="fBonus">⭐ לבונוס</button>
+      <button type="button" class="btn alt" id="fMap">חזרה למפה</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"><span id="toastT"></span></div>
+
+<script type="application/json" id="data">{"gates":[{"n":1,"name":"רכבת ההרים","emoji":"🎢","sign":["גובה מינימלי: 1.40 מ'","גיל מינימלי: 10"],"until":20,"mins":12,"sheet":"שער 1 - רכבת ההרים","q":"השומר בודק כל מבקר בכניסה לרכבת. כמה מבקרים יכולים לעלות עליה? המספר הזה הוא הקוד של השער.","lead":false,"h":"2bk5asxc23f"},{"n":2,"name":"הקופה","emoji":"🎟️","sign":["50% הנחה","לחוגגי יום הולדת ולבעלי מנוי"],"until":32,"mins":12,"sheet":"שער 2 - הקופה","q":"הקופאית מחלקת הנחות לפי השלט. כמה מבקרים קיבלו הנחה? המספר הזה הוא הקוד של השער.","lead":true,"h":"mx7okamulv"},{"n":3,"name":"בית הרוחות","emoji":"👻","sign":["לא מתאים לבעלי כרטיס ילד","מגובה 1.20 מ'"],"until":44,"mins":12,"sheet":"שער 3 - בית הרוחות","q":"השומר בבית הרוחות מחכה בכניסה. כמה אחוזים מכל המבקרים נכנסו? הקוד הוא האחוז, מספר שלם. כותבים אותו בלי הסימן %.","lead":false,"h":"a74hj3r51d"},{"n":4,"name":"הגלגל הענק","emoji":"🎡","sign":["מפת השומר","צבעו ירוק כל מספר בין 40 ל-60, כולל 40 ו-60"],"until":56,"mins":12,"sheet":"שער 4 - הגלגל הענק","q":"הצבע חושף את קוד היציאה: 4 ספרות. מה הקוד?","lead":true,"h":"7u5g2qjss7"}],"bonus":{"sign":["מי המבקר הכי צעיר שעלה על רכבת ההרים?"],"q":"מי המבקר הכי צעיר שעלה על רכבת ההרים? כתבו את מספר המבקר שלו.","h":"1riv4ws67ra"}}</script>
+<script>
+(function(){
+'use strict';
+var DATA=JSON.parse(document.getElementById('data').textContent);
+var GATES=DATA.gates, BONUS=DATA.bonus, NS='http://www.w3.org/2000/svg';
+var KEY='lunapark10.v1';
+var REDUCED=false;try{REDUCED=window.matchMedia('(prefers-reduced-motion: reduce)').matches}catch(e){}
+function $(id){return document.getElementById(id)}
+function el(name,attrs,parent){var e=document.createElementNS(NS,name);for(var k in attrs)e.setAttribute(k,attrs[k]);if(parent)parent.appendChild(e);return e}
+
+/* ---------- מצב ושמירה (localStorage עטוף ב-try) ---------- */
+var state={solved:{},bonus:false,t0:null,t1:null};
+function load(){try{var s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&typeof s==='object'){state.solved=s.solved||{};state.bonus=!!s.bonus;state.t0=s.t0||null;state.t1=s.t1||null}}catch(e){}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}}
+function clearSaved(){try{localStorage.removeItem(KEY)}catch(e){}}
+function firstUnsolved(){for(var i=0;i<GATES.length;i++){if(!state.solved[GATES[i].n])return GATES[i].n}return 0}
+function gateState(n){if(state.solved[n])return 'done';return firstUnsolved()===n?'current':'locked'}
+function allDone(){return firstUnsolved()===0}
+
+/* ---------- בדיקת קוד: מערבלים ולא שומרים את הקוד כטקסט ---------- */
+function h53(str){var h1=0xdeadbeef,h2=0x41c6ce57;for(var i=0,ch;i<str.length;i++){ch=str.charCodeAt(i);h1=Math.imul(h1^ch,2654435761);h2=Math.imul(h2^ch,1597334677)}
+  h1=Math.imul(h1^(h1>>>16),2246822507)^Math.imul(h2^(h2>>>13),3266489909);h2=Math.imul(h2^(h2>>>16),2246822507)^Math.imul(h1^(h1>>>13),3266489909);
+  return (4294967296*(2097151&h2)+(h1>>>0)).toString(36)}
+function norm(s,isBonus){s=String(s||'').replace(/[٠-٩]/g,function(d){return d.charCodeAt(0)-0x660}).replace(/[۰-۹]/g,function(d){return d.charCodeAt(0)-0x6f0});
+  if(isBonus)s=s.replace(/מבקר/g,'');
+  s=s.replace(/[\s‎‏‪-‮⁦-⁩\-–—]/g,'').replace(/^%|%$/g,'');return s}
+function check(id,input){var isB=(id==='b');var n=norm(input,isB);if(n==='')return 'empty';if(!/^\d+$/.test(n))return 'nan';
+  var want=isB?BONUS.h:GATES[id-1].h;return h53('lp10|'+id+'|'+n)===want?'ok':'wrong'}
+
+/* ---------- ציור: כוכבים, נורות, סככה, גלגל, תמיכות ---------- */
+function rnd(seed){var s=seed;return function(){s=(s*16807)%2147483647;return (s-1)/2147483646}}
+(function drawDecor(){
+  var r=rnd(7),g=$('stars');
+  for(var i=0;i<46;i++){var c=el('circle',{cx:(r()*520).toFixed(1),cy:(r()*140+4).toFixed(1),r:(r()*1.4+.5).toFixed(2),fill:'#fff'},g);c.setAttribute('class','star');c.style.animationDelay=(-r()*3).toFixed(2)+'s'}
+  var s=$('strings'),cols=['#ff4f8b','#ffc83d','#2fe3c1','#9d7bff'];
+  /* נורות על העקומה: Q 130 66 260 24, ואחריה Q 390 -18 520 22 */
+  function qb(p0,p1,p2,u){var m=1-u;return m*m*p0+2*m*u*p1+u*u*p2}
+  for(var k=0;k<=14;k++){var t=k/14,seg=t<.5?0:1,u=(t*2)%1;if(k===14){seg=1;u=1}
+    var cx=seg?qb(260,390,520,u):qb(0,130,260,u),cy=seg?qb(24,-18,22,u):qb(22,66,24,u);
+    var b=el('circle',{cx:cx.toFixed(1),cy:cy.toFixed(1),r:4.5,fill:cols[k%4]},s);b.setAttribute('class','bulb');b.style.animationDelay=(-k*.25)+'s'}
+  /* סככת הקופה */
+  var a=$('awning'),n=6,w=124/n,i2;
+  for(i2=0;i2<n;i2++){var x1=-62+i2*w,x0=-50+i2*(100/n);
+    el('path',{d:'M'+x0+' -54 L'+(x0+100/n)+' -54 L'+(x1+w)+' -26 L'+x1+' -26Z',fill:i2%2?'#fff3f7':'#ff4f8b'},a);
+    el('circle',{cx:x1+w/2,cy:-26,r:w/2,fill:i2%2?'#fff3f7':'#ff4f8b'},a)}
+  /* גלגל ענק */
+  var wh=$('wheel'),R=62,i3;
+  el('circle',{r:R,fill:'none',stroke:'#ff4f8b','stroke-width':4},wh);
+  el('circle',{r:R*.7,fill:'none',stroke:'#2fe3c1','stroke-width':2.5},wh);
+  var gc=['#ffc83d','#2fe3c1','#ff4f8b','#9d7bff'];
+  for(i3=0;i3<8;i3++){var ang=i3*Math.PI/4,sx=Math.sin(ang)*R,sy=-Math.cos(ang)*R;
+    el('line',{x1:0,y1:0,x2:sx.toFixed(1),y2:sy.toFixed(1),stroke:'#c9ccee','stroke-width':2},wh);
+    var gp=el('g',{transform:'translate('+sx.toFixed(1)+' '+sy.toFixed(1)+')'},wh),cn=el('g',{},gp);cn.setAttribute('class','counter');
+    el('line',{x1:0,y1:0,x2:0,y2:6,stroke:'#c9ccee','stroke-width':2},cn);
+    el('rect',{x:-9,y:6,width:18,height:13,rx:4,fill:gc[i3%4],stroke:'#0b0d27','stroke-width':1.5},cn);
+    el('rect',{x:-5,y:9,width:10,height:5,rx:2,fill:'#0b0d27',opacity:.35},cn)}
+  for(i3=0;i3<16;i3++){var a2=i3*Math.PI/8,bb=el('circle',{cx:(Math.sin(a2)*(R+0)).toFixed(1),cy:(-Math.cos(a2)*R).toFixed(1),r:2.8,fill:'#ffe08a'},wh);bb.setAttribute('class','bulb');bb.style.animationDelay=(-i3*.1)+'s'}
+})();
+
+/* ---------- רכבת ההרים: עגלה על המסילה + עמודי תמיכה ---------- */
+var track=$('track1'),car=$('car1'),TL=track.getTotalLength();
+(function supports(){var g=$('supports1');for(var d=14;d<TL-6;d+=22){var p=track.getPointAtLength(d);el('line',{x1:p.x.toFixed(1),y1:(p.y+4).toFixed(1),x2:p.x.toFixed(1),y2:58},g)}})();
+function placeCar(t){var d=t*TL,p=track.getPointAtLength(d),q=track.getPointAtLength(Math.min(TL,d+1)),a=Math.atan2(q.y-p.y,q.x-p.x)*180/Math.PI;
+  car.setAttribute('transform','translate('+p.x.toFixed(1)+' '+p.y.toFixed(1)+') rotate('+a.toFixed(1)+')')}
+var carT=0,lastTs=0;
+function tick(ts){var ride=$('ride1');if(!ride.classList.contains('locked')&&!REDUCED){var dt=lastTs?Math.min(.05,(ts-lastTs)/1000):0;carT=(carT+dt/9)%1;placeCar(carT)}lastTs=ts;requestAnimationFrame(tick)}
+placeCar(0);requestAnimationFrame(tick);
+
+/* ---------- תוויות המתקנים ---------- */
+var LABELS=[];
+GATES.forEach(function(g){
+  var host=$('ride'+g.n).querySelector('.label');
+  var text=el('text',{x:0,y:0,'text-anchor':'middle','dominant-baseline':'central'},host);text.textContent=g.emoji+' '+g.name;
+  LABELS.push({g:g,host:host,text:text});
+});
+function sizeLabels(){LABELS.forEach(function(L){
+  var bb;try{bb=L.text.getBBox()}catch(e){bb={width:130}}var w=Math.max(130,bb.width+60);
+  if(!L.rect){L.rect=el('rect',{rx:18,ry:18,height:36,y:-18},L.host);L.host.insertBefore(L.rect,L.text);
+    L.badge=el('g',{},L.host);L.badge.setAttribute('class','badge');el('circle',{r:17,cy:0},L.badge);L.bt=el('text',{x:0,y:1},L.badge)}
+  L.rect.setAttribute('x',-w/2);L.rect.setAttribute('width',w);L.text.setAttribute('x',-6);
+  L.badge.setAttribute('transform','translate('+(w/2-4)+' 0)')})}
+
+/* ---------- ציור מצב ---------- */
+function render(){
+  var cur=firstUnsolved(),done=Object.keys(state.solved).length;
+  GATES.forEach(function(g){var r=$('ride'+g.n),s=gateState(g.n);r.classList.remove('locked','current','done');r.classList.add(s);
+    var art=r.querySelector('.art');if(s==='locked')art.setAttribute('filter','url(#fGrey)');else art.removeAttribute('filter');
+    var txt=s==='done'?'פתוח':s==='current'?'המתקן הבא, לחצו עליו':'נעול';r.setAttribute('aria-label','שער '+g.n+', '+g.name+', '+txt);
+    var L=LABELS[g.n-1];if(L&&L.bt)L.bt.textContent=s==='done'?'✓':s==='locked'?'🔒':String(g.n)});
+  for(var i=1;i<=4;i++){$('lit'+i).classList.toggle('on',!!state.solved[i])}
+  var ex=$('exit');ex.classList.toggle('open',allDone());ex.setAttribute('aria-label',allDone()?'שער היציאה, פתוח':'שער היציאה, נעול');
+  $('bonus').classList.toggle('off',!allDone());$('bonus').classList.toggle('got',state.bonus);
+  var ol=$('steps');ol.innerHTML='';
+  GATES.forEach(function(g){var li=document.createElement('li');var s=gateState(g.n);li.className='chip '+s;li.textContent=(s==='done'?'✓ ':s==='locked'?'🔒 ':'')+g.n;li.setAttribute('aria-label','שער '+g.n+(s==='done'?' פתוח':s==='current'?' הבא':' נעול'));ol.appendChild(li)});
+  var le=document.createElement('li');le.className='chip '+(allDone()?'done':'');le.textContent=allDone()?'✓ יציאה':'🚪 יציאה';ol.appendChild(le);
+}
+
+/* ---------- הודעות קטנות ---------- */
+var toastTimer=0;
+function toast(msg){var t=$('toast');$('toastT').textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(function(){t.classList.remove('show')},2600)}
+
+/* ---------- חלון שלט ומנעול ---------- */
+var openId=null,wrongCount={},lastFocus=null;
+function lockScroll(on){document.documentElement.classList.toggle('lock-scroll',!!on)}
+function openModal(id){
+  var isB=(id==='b'),g=isB?null:GATES[id-1];openId=id;lastFocus=document.activeElement;
+  var solved=isB?state.bonus:!!state.solved[id];
+  $('mTitle').textContent=isB?'⭐ בונוס – מי הכי צעיר?':g.emoji+' שער '+g.n+' – '+g.name;
+  var b=$('mBoard');b.innerHTML='';b.className='board'+((!isB&&g.lead)?' lead':'');
+  (isB?BONUS.sign:g.sign).forEach(function(line){var d=document.createElement('div');d.className='sline';d.textContent=line;b.appendChild(d)});
+  var meta=$('mMeta');meta.innerHTML='';
+  function row(html){var d=document.createElement('div');d.innerHTML=html;meta.appendChild(d)}
+  if(isB){row('לא חובה. למי שפתח את כל ארבעת המנעולים לפני הזמן.');row('📁 בקובץ האקסל: הגיליון <b>בונוס - הכי צעיר</b>')}
+  else{row('⏱ '+g.mins+' דקות לשער הזה. <b>עד דקה '+g.until+' בשעה.</b>');row('📁 בקובץ האקסל: הגיליון <b>'+g.sheet+'</b>')}
+  var q=$('mQ');q.innerHTML='';var qb=document.createElement('b');qb.textContent='❓ ';q.appendChild(qb);q.appendChild(document.createTextNode(isB?BONUS.q:g.q));
+  $('mLabel').textContent=isB?'הקוד שמצאנו (מספר המבקר)':'הקוד שמצאנו';
+  var inp=$('code');inp.value='';inp.disabled=solved;inp.placeholder=(!isB&&g.n===4)?'• • • •':'• • •';
+  $('mGo').hidden=solved;
+  $('mCard').classList.toggle('is-open',solved);$('mCard').classList.remove('shake');
+  var m=$('mMsg');m.className='msg';m.textContent=solved?'המנעול הזה כבר פתוח ✅':'';
+  $('mAfter').hidden=true;$('mHelp').open=false;
+  $('modal').hidden=false;lockScroll(true);$('modal').scrollTop=0;
+  var fine=false;try{fine=window.matchMedia('(pointer:fine)').matches}catch(e){}
+  if(!solved&&fine)setTimeout(function(){inp.focus()},30);else $('mClose').focus();
+}
+function closeModal(){$('modal').hidden=true;openId=null;if(!isOverlayOpen())lockScroll(false);if(lastFocus&&lastFocus.focus)try{lastFocus.focus()}catch(e){}}
+function isOverlayOpen(){return !$('intro').hidden||!$('finish').hidden||!$('modal').hidden}
+function wrongMsg(id){var c=(wrongCount[id]=(wrongCount[id]||0)+1);
+  if(c>=3){$('mHelp').open=true;return 'עוד לא. תקועים? כלל 3 הדקות: רמז אפור, אחר כך חבר, ורק אחר כך המורה.'}
+  return c===1?'המנעול לא זז. בדקו שוב: כל סימן קטן בנוסחה יכול לשנות את הקוד.':'עוד לא. עברו על הנוסחה שורה אחרי שורה, ובדקו מה סימנתם לפני הספירה.'}
+$('mForm').addEventListener('submit',function(ev){ev.preventDefault();if(openId==null)return;
+  var id=openId,res=check(id,$('code').value),m=$('mMsg'),card=$('mCard');
+  if(res==='empty'){m.className='msg bad';m.textContent='כתבו קודם קוד.';return}
+  if(res==='nan'){m.className='msg bad';m.textContent='הקוד הוא מספר. כתבו רק ספרות.';return}
+  if(res==='wrong'){m.className='msg bad';m.textContent=wrongMsg(id);card.classList.remove('shake');void card.offsetWidth;card.classList.add('shake');return}
+  /* נכון */
+  card.classList.add('is-open');$('code').disabled=true;$('mGo').hidden=true;m.className='msg good';
+  if(id==='b'){state.bonus=true;save();render();m.textContent='הקוד נכון! כל הכבוד על הבונוס ⭐';$('mBack').textContent='חזרה למפה';$('mAfter').hidden=false;return}
+  state.solved[id]=true;if(!state.t0)state.t0=Date.now();
+  if(allDone())state.t1=Date.now();
+  save();render();
+  if(allDone()){m.textContent='הקוד נכון! השער הראשי נפתח...';setTimeout(function(){closeModal();showFinish()},1100)}
+  else{m.textContent='הקוד נכון! המנעול נפתח. המתקן הבא נדלק.';$('mBack').textContent='למפה, למתקן הבא';$('mAfter').hidden=false}
+});
+$('mBack').addEventListener('click',closeModal);
+$('mClose').addEventListener('click',closeModal);
+$('modal').addEventListener('click',function(ev){if(ev.target===$('modal'))closeModal()});
+document.addEventListener('keydown',function(ev){if(ev.key==='Escape'){if(!$('modal').hidden)closeModal();else if(!$('finish').hidden)hideFinish();else if(!$('intro').hidden&&state.t0!==null)hideIntro()}});
+
+/* ---------- לחיצה על מתקן ---------- */
+function onRide(n){var s=gateState(n);
+  if(s==='locked'){toast('קודם פותחים את המתקן שמואר.');return}
+  openModal(n)}
+GATES.forEach(function(g){var r=$('ride'+g.n);
+  r.addEventListener('click',function(){onRide(g.n)});
+  r.addEventListener('keydown',function(ev){if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();onRide(g.n)}})});
+$('exit').addEventListener('click',onExit);$('exit').addEventListener('keydown',function(ev){if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();onExit()}});
+function onExit(){if(allDone())showFinish();else toast('השער נפתח כשכל ארבעת המנעולים פתוחים.')}
+$('bonus').addEventListener('click',function(){openModal('b')});
+$('bonus').addEventListener('keydown',function(ev){if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();openModal('b')}});
+
+/* ---------- מסך פתיחה, הסבר ואיפוס ---------- */
+function showIntro(){$('intro').hidden=false;$('intro').scrollTop=0;lockScroll(true);$('btnStart').focus()}
+function hideIntro(){$('intro').hidden=true;if(!isOverlayOpen())lockScroll(false)}
+$('btnStart').addEventListener('click',function(){hideIntro();if(!state.t0){state.t0=Date.now();save()}
+  var c=firstUnsolved();if(c)toast('המתקן המואר מחכה לכם. לחצו עליו.')});
+$('btnHelp').addEventListener('click',showIntro);
+var resetTimer=0;
+$('btnReset').addEventListener('click',function(){var b=$('btnReset');
+  if(b.dataset.arm==='1'){clearTimeout(resetTimer);b.dataset.arm='';b.textContent='🔄 מחדש';state={solved:{},bonus:false,t0:null,t1:null};wrongCount={};clearSaved();render();hideFinish();showIntro();return}
+  b.dataset.arm='1';b.textContent='בטוחים? לחצו שוב';resetTimer=setTimeout(function(){b.dataset.arm='';b.textContent='🔄 מחדש'},3500)});
+
+/* ---------- סיום וזיקוקים ---------- */
+var fwRun=false,fwRaf=0;
+function showFinish(){
+  var t=$('fTime');if(state.t0&&state.t1){var mins=Math.max(1,Math.round((state.t1-state.t0)/60000));t.textContent='הזמן שלכם: '+mins+' דקות';t.hidden=false}else t.hidden=true;
+  $('fBonus').hidden=state.bonus;
+  $('finish').hidden=false;lockScroll(true);startFireworks();$('fMap').focus()}
+function hideFinish(){$('finish').hidden=true;stopFireworks();if(!isOverlayOpen())lockScroll(false)}
+$('fMap').addEventListener('click',hideFinish);
+$('fBonus').addEventListener('click',function(){hideFinish();openModal('b')});
+function startFireworks(){var cv=$('fw'),ctx=cv.getContext&&cv.getContext('2d');if(!ctx||REDUCED)return;fwRun=true;
+  var dpr=Math.min(2,window.devicePixelRatio||1),W=0,H=0,parts=[],last=0,next=0,cols=['#ffc83d','#ff4f8b','#2fe3c1','#9d7bff','#ffffff','#7ad0ff'];
+  function size(){W=cv.clientWidth;H=cv.clientHeight;cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0)}size();
+  function burst(){var x=W*(.15+Math.random()*.7),y=H*(.12+Math.random()*.4),c=cols[Math.floor(Math.random()*cols.length)],n=46;
+    for(var i=0;i<n;i++){var a=i/n*Math.PI*2+Math.random()*.2,v=2+Math.random()*3.2;parts.push({x:x,y:y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,l:1,c:c})}}
+  function frame(ts){if(!fwRun)return;var dt=last?Math.min(40,ts-last)/16:1;last=ts;
+    ctx.globalCompositeOperation='destination-out';ctx.fillStyle='rgba(0,0,0,.2)';ctx.fillRect(0,0,W,H);ctx.globalCompositeOperation='lighter';
+    if(ts>next){burst();next=ts+500+Math.random()*600}
+    for(var i=parts.length-1;i>=0;i--){var p=parts[i];p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=.045*dt;p.vx*=.992;p.l-=.011*dt;
+      if(p.l<=0){parts.splice(i,1);continue}ctx.globalAlpha=p.l;ctx.fillStyle=p.c;ctx.beginPath();ctx.arc(p.x,p.y,2.2,0,6.283);ctx.fill()}
+    ctx.globalAlpha=1;fwRaf=requestAnimationFrame(frame)}
+  window.addEventListener('resize',size);burst();fwRaf=requestAnimationFrame(frame)}
+function stopFireworks(){fwRun=false;cancelAnimationFrame(fwRaf)}
+
+/* ---------- התחלה ---------- */
+document.body.classList.add('boot');setTimeout(function(){document.body.classList.remove('boot')},400);
+load();
+sizeLabels();render();
+if(state.t0!==null||Object.keys(state.solved).length){hideIntro()}else{lockScroll(true)}
+if(typeof document.fonts!=='undefined'&&document.fonts.ready)document.fonts.ready.then(function(){sizeLabels();render()});
+window.addEventListener('load',function(){sizeLabels();render()});
+})();
+</script>
+</body>
+</html>
