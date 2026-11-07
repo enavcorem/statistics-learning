@@ -603,7 +603,7 @@ $('btnReset').addEventListener('click',function(){var b=$('btnReset');
 /* ---------- סיום וזיקוקים ---------- */
 var fwRun=false,fwRaf=0;
 function showFinish(){
-  var t=$('fTime');if(state.t0&&state.t1){var mins=Math.max(1,Math.round((state.t1-state.t0)/60000));t.textContent='הזמן שלכם: '+mins+' דקות';t.hidden=false}else t.hidden=true;
+  var t=$('fTime');if(state.t0&&state.t1){var mins=Math.max(1,Math.round((state.t1-state.t0)/60000));t.textContent='הזמן שלכם: '+(mins===1?'דקה אחת':mins+' דקות');t.hidden=false}else t.hidden=true;
   $('fBonus').hidden=state.bonus;
   $('finish').hidden=false;lockScroll(true);startFireworks();$('fMap').focus()}
 function hideFinish(){$('finish').hidden=true;stopFireworks();if(!isOverlayOpen())lockScroll(false)}
