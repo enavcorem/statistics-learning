@@ -1,0 +1,154 @@
+/* ===== עיצוב הרכיבים של "מעבדת הרבעונים" =====
+   כל הצבעים כאן הם טוקנים. אותה שפה צבעונית בכל הלומדה:
+   טורקיז = החצי התחתון, כתום = החצי העליון, אדום = חריגים וגבולות. */
+
+:root {
+  --cs2-low: var(--chapter-2);
+  --cs2-low-soft: #DDF6F3;
+  --cs2-low-ink: #0F7A70;
+  --cs2-up: var(--chapter-3);
+  --cs2-up-soft: #FFF0DB;
+  --cs2-up-ink: #A65F00;
+  --cs2-bad: var(--danger);
+  --cs2-bad-soft: var(--danger-bg);
+  --cs2-bad-ink: #A6231F;
+  --cs2-good: var(--success);
+  --cs2-good-soft: var(--success-bg);
+  --cs2-good-ink: #1E8449;
+  --cs2-primary: var(--color-primary);
+  --cs2-ink: var(--text);
+  --cs2-muted: var(--text-muted);
+  --cs2-line: #D9D9E6;
+  --cs2-paper: var(--card-bg);
+  --cs2-wash: var(--bg);
+}
+
+.q-chart { display: flex; flex-direction: column; gap: var(--space-2); }
+.q-title { text-align: center; font-weight: 700; }
+.q-caption { text-align: center; font-size: 0.9rem; color: var(--cs2-muted); }
+.q-muted { color: var(--cs2-muted); font-size: 0.95rem; }
+
+/* תרשים */
+.q-svg svg { display: block; width: 100%; max-width: 680px; height: auto; margin: 0 auto; overflow: visible; }
+.q-svg svg text { font-family: var(--font-body); fill: var(--cs2-ink); }
+.q-axis { stroke: var(--cs2-ink); stroke-width: 2; }
+.q-svg svg .q-tick { fill: var(--cs2-muted); font-size: 15px; }
+.q-svg svg .q-label { font-size: 16px; font-weight: 700; }
+.q-svg svg .q-label-low { fill: var(--cs2-low-ink); }
+.q-svg svg .q-label-up { fill: var(--cs2-up-ink); }
+.q-svg svg .q-fence-label { fill: var(--cs2-bad-ink); font-size: 15px; font-weight: 700; }
+.q-box { fill: var(--cs2-low-soft); stroke: var(--cs2-ink); stroke-width: 3; }
+.q-median { stroke: var(--cs2-ink); stroke-width: 5; }
+.q-whisk { stroke: var(--cs2-ink); stroke-width: 3; }
+.q-whisk-bad { stroke: var(--cs2-bad); stroke-width: 4; }
+.q-fence { stroke: var(--cs2-bad); stroke-width: 2; stroke-dasharray: 6 6; }
+.q-outlier { fill: var(--cs2-bad); stroke: var(--cs2-paper); stroke-width: 2; }
+.q-iqr { fill: none; stroke: var(--cs2-up); stroke-width: 3; }
+.q-mean { fill: none; stroke: var(--cs2-up-ink); stroke-width: 4; stroke-linecap: round; }
+.q-dot { stroke: var(--cs2-paper); stroke-width: 1.5; }
+.q-dot-plain { fill: var(--cs2-muted); }
+.q-dot-low { fill: var(--cs2-low); }
+.q-dot-up { fill: var(--cs2-up); }
+.q-dot-mid { fill: var(--cs2-ink); }
+
+/* נקודות לגרירה: touch-action רק עליהן, כדי שאפשר יהיה לגלול את הדף מחוץ להן */
+.q-drag { fill: var(--cs2-low); stroke: var(--cs2-paper); stroke-width: 2; cursor: grab; touch-action: none; }
+.q-drag.q-drag-out { fill: var(--cs2-bad); }
+.q-drag.active { cursor: grabbing; stroke: var(--cs2-ink); }
+.q-drag:focus-visible { outline: none; stroke: var(--cs2-primary); stroke-width: 4; }
+
+/* אריחי מספרים */
+.q-tiles { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: flex-end; justify-content: center; }
+.q-cell { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.q-cell small, .q-divider small { font-size: 0.8rem; font-weight: 700; color: var(--cs2-muted); white-space: nowrap; }
+.q-tile {
+  font: 700 1.1rem var(--font-body); min-width: 46px; height: 46px; padding: 0 6px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-sm); border: 2px solid var(--cs2-line); background: var(--cs2-paper); color: var(--cs2-ink);
+}
+.q-tile-btn { cursor: pointer; }
+.q-tile-btn:hover { border-color: var(--cs2-ink); }
+.q-tile-low { background: var(--cs2-low-soft); border-color: var(--cs2-low); }
+.q-tile-up { background: var(--cs2-up-soft); border-color: var(--cs2-up); }
+.q-tile-med { background: var(--cs2-ink); border-color: var(--cs2-ink); color: var(--cs2-paper); }
+.q-tile-q { border-width: 4px; }
+.q-tile-sel { background: var(--cs2-bad-soft); border-color: var(--cs2-bad); border-style: dashed; }
+.q-slot { min-width: 46px; height: 46px; border: 2px dashed var(--cs2-line); border-radius: var(--radius-sm); }
+.q-divider { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.q-divider i { width: 3px; height: 46px; border-radius: 2px; background: var(--cs2-ink); }
+.q-divider-q i { background: var(--color-accent); }
+.q-shake { animation: q-shake 0.35s; }
+@keyframes q-shake { 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+
+/* החלפת שפם */
+.q-toggle { display: flex; gap: var(--space-2); justify-content: center; flex-wrap: wrap; }
+.q-toggle-btn {
+  font: inherit; font-size: 0.95rem; font-weight: 600; cursor: pointer;
+  border: 1.5px solid var(--cs2-line); background: var(--cs2-paper); color: var(--cs2-ink);
+  border-radius: var(--radius-sm); padding: 6px 14px;
+}
+.q-toggle-btn.on { background: var(--cs2-ink); color: var(--cs2-paper); border-color: var(--cs2-ink); }
+.q-note { padding: var(--space-3) var(--space-4); border-radius: var(--radius-sm); font-weight: 500; }
+.q-note-ok { background: var(--cs2-good-soft); color: var(--cs2-good-ink); }
+.q-note-bad { background: var(--cs2-bad-soft); color: var(--cs2-bad-ink); }
+
+/* הערה ליד תשובה במבחן */
+.q-verdict { margin-top: var(--space-3); font-weight: 700; }
+.q-verdict.ok { color: var(--cs2-good-ink); }
+.q-verdict.bad { color: var(--cs2-bad-ink); }
+
+/* בנייה מודרכת */
+.q-builder { display: flex; flex-direction: column; gap: var(--space-3); }
+.q-builder-title { margin: 0; }
+.q-pool { display: flex; flex-direction: column; gap: var(--space-2); }
+.q-pool[hidden] { display: none; }
+.q-builder-layout { display: grid; grid-template-columns: 190px 1fr; gap: var(--space-4); align-items: start; }
+.q-stepper { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-1); }
+.q-stepper li { display: flex; gap: var(--space-2); align-items: center; padding: 4px 8px; border-radius: var(--radius-sm); color: var(--cs2-muted); font-weight: 600; }
+.q-step-dot { width: 26px; height: 26px; flex: none; border-radius: 50%; border: 2px solid var(--cs2-line); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700; }
+.q-stepper li.now { background: var(--cs2-wash); color: var(--cs2-ink); }
+.q-stepper li.now .q-step-dot { border-color: var(--cs2-primary); background: var(--cs2-primary); color: var(--cs2-paper); }
+.q-stepper li.done { color: var(--cs2-ink); }
+.q-stepper li.done .q-step-dot { border-color: var(--cs2-good); background: var(--cs2-good); color: var(--cs2-paper); }
+.q-step-card { display: flex; flex-direction: column; gap: var(--space-3); border: 1px solid var(--cs2-line); border-radius: var(--radius-md); padding: var(--space-4); min-width: 0; }
+.q-step-card h3, .q-step-card p { margin: 0; }
+.q-fields { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.q-field { display: flex; flex-direction: column; gap: var(--space-1); font-weight: 700; font-size: 0.95rem; }
+.q-input { font: 700 1.1rem var(--font-body); width: 130px; padding: 8px 10px; text-align: center; border-radius: var(--radius-sm); border: 2px solid var(--cs2-line); background: var(--cs2-wash); color: var(--cs2-ink); }
+.q-input:focus { outline: none; border-color: var(--cs2-primary); }
+.q-input.ok { border-color: var(--cs2-good); background: var(--cs2-good-soft); }
+.q-input.no { border-color: var(--cs2-bad); background: var(--cs2-bad-soft); }
+.q-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+.q-actions [hidden] { display: none; }
+.q-done { display: flex; flex-direction: column; gap: var(--space-3); }
+.q-done h3, .q-done p { margin: 0; }
+.q-five { display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: var(--space-2); }
+.q-five div, .q-stat { background: var(--cs2-wash); border: 1px solid var(--cs2-line); border-radius: var(--radius-sm); padding: var(--space-2); text-align: center; }
+.q-five small, .q-stat small { display: block; color: var(--cs2-muted); font-size: 0.8rem; font-weight: 600; }
+.q-five b, .q-stat b { font-size: 1.15rem; }
+
+/* מעבדה */
+.q-lab { display: flex; flex-direction: column; gap: var(--space-3); user-select: none; }
+.q-goal { display: flex; gap: var(--space-3); align-items: center; padding: var(--space-3) var(--space-4); border-radius: var(--radius-sm); border: 2px solid var(--cs2-line); font-weight: 600; }
+.q-goal.met { border-color: var(--cs2-good); background: var(--cs2-good-soft); }
+.q-goal-check { width: 26px; height: 26px; flex: none; border-radius: 50%; border: 2px solid var(--cs2-line); display: flex; align-items: center; justify-content: center; font-weight: 800; color: var(--cs2-paper); }
+.q-goal.met .q-goal-check { background: var(--cs2-good); border-color: var(--cs2-good); }
+.q-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: var(--space-2); }
+.q-stat.hl { border-color: var(--cs2-primary); box-shadow: inset 0 0 0 1px var(--cs2-primary); }
+
+@media (max-width: 640px) {
+  /* בטלפון התרשים נשאר קריא וגדול מספיק לגרירה, וגוללים אותו הצידה */
+  .q-svg { overflow-x: auto; direction: ltr; }
+  .q-svg svg { width: 540px; max-width: none; }
+  .q-builder-layout { grid-template-columns: 1fr; }
+  .q-stepper { flex-direction: row; overflow-x: auto; }
+  .q-stepper li { white-space: nowrap; }
+  .q-stepper li .q-step-name { display: none; }
+  .q-stepper li.now .q-step-name { display: inline; }
+  .q-tile, .q-slot { min-width: 40px; height: 40px; font-size: 1rem; }
+  .q-divider i { height: 40px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .q-shake { animation: none; }
+}
