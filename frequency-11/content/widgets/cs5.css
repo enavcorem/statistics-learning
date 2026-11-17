@@ -1,0 +1,74 @@
+/* ===== עיצוב הרכיבים של "שכיחות" =====
+   כל הצבעים כאן הם טוקנים. כחול = עמודות, כתום = עמודה מודגשת, אדום = גרף שגוי. */
+
+:root {
+  --cs5-bar: var(--chapter-1);
+  --cs5-hi: #E8913A;
+  --cs5-bad: var(--danger);
+  --cs5-bad-ink: #A6231F;
+  --cs5-good: var(--success);
+  --cs5-good-ink: #1E8449;
+  --cs5-primary: var(--color-primary);
+  --cs5-ink: var(--text);
+  --cs5-muted: var(--text-muted);
+  --cs5-rule: #D9D9E6;
+  --cs5-grid: #ECEEF4;
+  --cs5-paper: var(--card-bg);
+  --cs5-wash: var(--bg);
+}
+
+/* הדגשת תאים בטבלאות התוכן: highlight: 'good' (שורת סיכום) / 'bad' (תוצאה שגויה) */
+:root { --cs5-good-wash: #E8F6EE; --cs5-bad-wash: #FDECEC; }
+.content-table td.highlight-good { background: var(--cs5-good-wash); }
+.content-table td.highlight-bad { background: var(--cs5-bad-wash); color: var(--cs5-bad-ink); }
+
+.f-raw { text-align: center; font-size: 1.15rem; letter-spacing: 1px; }
+.f-chart { display: flex; flex-direction: column; gap: var(--space-2); }
+.f-title { text-align: center; font-weight: 700; }
+.f-caption { text-align: center; font-size: 0.9rem; color: var(--cs5-muted); }
+
+/* גרף */
+.f-svg svg { display: block; width: 100%; max-width: 640px; height: auto; margin: 0 auto; }
+.f-svg svg text { font-family: var(--font-body); fill: var(--cs5-muted); }
+.f-svg svg .f-tick { font-size: 14px; }
+.f-svg svg .f-val { font-size: 14px; font-weight: 700; fill: var(--cs5-ink); }
+.f-svg svg .f-axis-title { font-size: 15px; font-weight: 700; fill: var(--cs5-ink); }
+.f-grid { stroke: var(--cs5-grid); stroke-width: 1; }
+.f-axis { stroke: var(--cs5-muted); stroke-width: 1.5; }
+.f-bar { fill: var(--cs5-bar); stroke: var(--cs5-paper); stroke-width: 1; opacity: 0.9; }
+.f-bar-hi { fill: var(--cs5-hi); }
+.f-bar-wrong { fill: var(--cs5-bad); opacity: 0.75; }
+.f-line { fill: none; stroke: var(--cs5-ink); stroke-width: 2.5; stroke-linejoin: round; }
+.f-pt { fill: var(--cs5-ink); stroke: var(--cs5-paper); stroke-width: 2; }
+.f-guide { stroke: var(--cs5-hi); stroke-width: 2.5; stroke-dasharray: 7 5; }
+
+/* כפתורי מעבר בין סוגי השכיחות */
+.f-tabs { display: flex; flex-wrap: wrap; gap: var(--space-2); justify-content: center; }
+.f-tab {
+  border: 2px solid var(--cs5-rule); background: var(--cs5-paper); color: var(--cs5-ink);
+  border-radius: 999px; padding: 6px 16px; font: inherit; font-weight: 600; cursor: pointer;
+}
+.f-tab:hover { border-color: var(--cs5-bar); }
+.f-tab.active { background: var(--cs5-bar); border-color: var(--cs5-bar); color: var(--cs5-paper); }
+.f-readout { background: var(--cs5-wash); border: 1px solid var(--cs5-rule); border-radius: var(--radius-sm); padding: var(--space-2) var(--space-3); text-align: center; }
+
+/* טבלה להשלמה */
+.f-fill { display: flex; flex-direction: column; gap: var(--space-3); align-items: stretch; }
+.f-fill > .btn { align-self: flex-start; }
+.f-fill-scroll { overflow-x: auto; }
+.f-fill-table { border-collapse: collapse; margin: 0 auto; min-width: 280px; }
+.f-fill-table th, .f-fill-table td { border: 1px solid var(--cs5-rule); padding: 6px 10px; text-align: center; }
+.f-fill-table th { background: var(--cs5-wash); font-weight: 700; }
+.f-cell { width: 90px; max-width: 100%; text-align: center; }
+.f-cell.f-ok { border-color: var(--cs5-good); background: var(--cs5-wash); }
+.f-cell.f-bad { border-color: var(--cs5-bad); }
+
+/* הערה ליד תשובה במבחן */
+.f-verdict { margin-top: var(--space-3); font-weight: 700; }
+.f-verdict.ok { color: var(--cs5-good-ink); }
+.f-verdict.bad { color: var(--cs5-bad-ink); }
+
+@media (max-width: 640px) {
+  .f-svg { overflow-x: auto; direction: ltr; }
+  .f-svg svg { width: 520px; max-width: none; }
+}

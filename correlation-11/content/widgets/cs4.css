@@ -1,0 +1,66 @@
+/* ===== עיצוב הרכיבים של "מתאמים" =====
+   כל הצבעים כאן הם טוקנים. כחול = קו מגמה, כהה = נקודות, אדום = חריג. */
+
+:root {
+  --cs4-line: var(--chapter-1);
+  --cs4-bad: var(--danger);
+  --cs4-bad-ink: #A6231F;
+  --cs4-good: var(--success);
+  --cs4-good-ink: #1E8449;
+  --cs4-primary: var(--color-primary);
+  --cs4-ink: var(--text);
+  --cs4-muted: var(--text-muted);
+  --cs4-rule: #D9D9E6;
+  --cs4-grid: #ECEEF4;
+  --cs4-paper: var(--card-bg);
+  --cs4-wash: var(--bg);
+  --cs4-neg: #C2416B;
+  --cs4-zero: #D9D9E6;
+  --cs4-pos: var(--chapter-1);
+}
+
+.c-chart { display: flex; flex-direction: column; gap: var(--space-2); }
+.c-title { text-align: center; font-weight: 700; }
+.c-caption { text-align: center; font-size: 0.9rem; color: var(--cs4-muted); }
+.c-r { text-align: center; font-size: 1.05rem; }
+
+/* גרף */
+.c-svg svg { display: block; width: 100%; max-width: 640px; height: auto; margin: 0 auto; }
+.c-svg svg text { font-family: var(--font-body); fill: var(--cs4-muted); }
+.c-svg svg .c-tick { font-size: 14px; }
+.c-svg svg .c-axis-title { font-size: 15px; font-weight: 700; fill: var(--cs4-ink); }
+.c-grid { stroke: var(--cs4-grid); stroke-width: 1; }
+.c-axis { stroke: var(--cs4-muted); stroke-width: 1.5; }
+.c-line { stroke: var(--cs4-line); stroke-width: 3; stroke-linecap: round; opacity: 0.9; }
+.c-dot { fill: var(--cs4-ink); stroke: var(--cs4-paper); stroke-width: 2; }
+.c-dot-out { fill: var(--cs4-bad); }
+
+/* מחוונים */
+.c-controls { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); align-items: center; }
+.c-slider { display: flex; align-items: center; gap: var(--space-2); flex: 1 1 260px; min-width: 0; }
+.c-slider-label { font-weight: 600; min-width: 90px; white-space: nowrap; }
+.c-range { flex: 1; min-width: 120px; accent-color: var(--cs4-primary); }
+.c-check { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; cursor: pointer; }
+.c-check input { width: 18px; height: 18px; accent-color: var(--cs4-line); }
+.c-readout { background: var(--cs4-wash); border: 1px solid var(--cs4-rule); border-radius: var(--radius-sm); padding: var(--space-2) var(--space-3); text-align: center; font-size: 1.05rem; }
+
+/* סקאלה מ-1- עד 1 */
+.c-scale { max-width: 520px; width: 100%; margin: 0 auto; }
+.c-scale-bar { position: relative; height: 12px; border-radius: 999px; background: linear-gradient(to right, var(--cs4-neg), var(--cs4-zero), var(--cs4-pos)); }
+.c-scale-mark { position: absolute; top: -5px; width: 6px; height: 22px; margin-inline-start: -3px; border-radius: 3px; background: var(--cs4-ink); }
+.c-scale-labels { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--cs4-muted); margin-top: 4px; }
+
+/* נחשו את המתאם */
+.c-guess { display: flex; flex-direction: column; gap: var(--space-3); }
+.c-round { font-weight: 700; color: var(--cs4-muted); }
+.c-done { margin-top: var(--space-2); font-weight: 700; }
+
+/* הערה ליד תשובה במבחן */
+.c-verdict { margin-top: var(--space-3); font-weight: 700; }
+.c-verdict.ok { color: var(--cs4-good-ink); }
+.c-verdict.bad { color: var(--cs4-bad-ink); }
+
+@media (max-width: 640px) {
+  .c-svg { overflow-x: auto; direction: ltr; }
+  .c-svg svg { width: 520px; max-width: none; }
+}
